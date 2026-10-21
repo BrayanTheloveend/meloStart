@@ -16,12 +16,13 @@ import {
   Text,
 } from "@chakra-ui/react";
 
-import { LuCheck, LuDownload, LuEye, LuMusic, LuPause, LuPlay, LuRotateCcw, LuSearch, LuTrash2 } from "react-icons/lu";
+import { LuCheck, LuDownload, LuEye, LuGlobe, LuMusic, LuPause, LuPlay, LuRotateCcw, LuSearch, LuSparkles, LuTrash2 } from "react-icons/lu";
 import { LucideAlertTriangle } from "lucide-react";
 import { api } from "@/lib/apiClient";
 import SunoMetricsOverview from "@/components/admin/SunoMetricsOverview";
 import { ShimmerTableRow } from "@/components/common/Shimmer";
 import { downloadTrackAudio } from "@/lib/downloadTrack";
+import CreateDemoTrackModal from "@/components/admin/CreateDemoTrackModal";
 
 export default function AdminTracksPage() {
   const [tracks, setTracks] = useState([]);
@@ -33,6 +34,8 @@ export default function AdminTracksPage() {
   const [toastMessage, setToastMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+  const [togglingPublicId, setTogglingPublicId] = useState(null);
   const audioRef = useRef(null);
 
   const notify = (msg) => {
@@ -144,6 +147,30 @@ export default function AdminTracksPage() {
     }
   };
 
+  const handleTogglePublic = async (track) => {
+    setTogglingPublicId(track.id);
+    try {
+      const newIsPublic = !track.isPublic;
+      const res = await api.patch(`/api/admin/tracks/${track.id}`, {
+        isPublic: newIsPublic,
+      });
+      if (res?.track) {
+        setTracks((prev) =>
+          prev.map((t) => (t.id === track.id ? { ...t, isPublic: res.track.isPublic } : t))
+        );
+        notify(
+          newIsPublic
+            ? `🌟 "${track.title}" est maintenant en ligne sur la page d'accueil !`
+            : `"${track.title}" a été retiré de l'accueil.`
+        );
+      }
+    } catch (err) {
+      notify(`Erreur modification accueil : ${err.message}`);
+    } finally {
+      setTogglingPublicId(null);
+    }
+  };
+
   return (
     <Stack gap="8">
       {/* Toast */}
@@ -185,6 +212,22 @@ export default function AdminTracksPage() {
             Inspectez les requêtes de génération, écoutez les masters et relancez les jobs en échec.
           </Text>
         </Stack>
+
+        <HStack gap="3">
+          <Button
+            size="sm"
+            rounded="full"
+            bg="linear-gradient(135deg, #FF5E8E 0%, #8A2BE2 100%)"
+            color="white"
+            fontWeight="700"
+            px="4"
+            onClick={() => setIsDemoModalOpen(true)}
+            _hover={{ transform: "translateY(-1px)", boxShadow: "0 8px 20px rgba(138,43,226,0.3)" }}
+            transition="all 0.2s ease"
+          >
+            🎵 Créer Démo Accueil
+          </Button>
+        </HStack>
       </Flex>
 
       {/* Métriques globales et état de Suno API */}
@@ -244,6 +287,7 @@ export default function AdminTracksPage() {
                 <Table.ColumnHeader>Genre & Voix</Table.ColumnHeader>
                 <Table.ColumnHeader>Durée</Table.ColumnHeader>
                 <Table.ColumnHeader>Statut / Progrès</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">Accueil</Table.ColumnHeader>
                 <Table.ColumnHeader>Date</Table.ColumnHeader>
                 <Table.ColumnHeader textAlign="right">Actions</Table.ColumnHeader>
               </Table.Row>
@@ -251,11 +295,11 @@ export default function AdminTracksPage() {
             <Table.Body>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <ShimmerTableRow key={i} columns={7} />
+                  <ShimmerTableRow key={i} columns={8} />
                 ))
               ) : filteredTracks.length === 0 ? (
                 <Table.Row>
-                  <Table.Cell colSpan={7} textAlign="center" py="10">
+                  <Table.Cell colSpan={8} textAlign="center" py="10">
                     <Stack align="center" gap="2">
                       <LuMusic size={28} color="#94a3b8" />
                       <Text color="ink.500" fontSize="sm" fontWeight="600">
@@ -365,6 +409,21 @@ export default function AdminTracksPage() {
                       )}
                     </Table.Cell>
 
+                    {/* Accueil (isPublic) */}
+                    <Table.Cell textAlign="center">
+                      <Button
+                        size="xs"
+                        rounded="full"
+                        variant={t.isPublic ? "solid" : "subtle"}
+                        bg={t.isPublic ? "emerald.500" : undefined}
+                        colorPalette={t.isPublic ? "green" : "gray"}
+                        loading={togglingPublicId === t.id}
+                        onClick={() => handleTogglePublic(t)}
+                        title={t.isPublic ? "Visible à l'accueil du site (cliquez pour masquer)" : "Masqué de l'accueil (cliquez pour afficher)"}
+                      >
+                        {t.isPublic ? "🌟 En Ligne" : "Masqué"}
+                      </Button>
+                    </Table.Cell>
 
                     {/* Date */}
                     <Table.Cell>
@@ -564,6 +623,14 @@ export default function AdminTracksPage() {
           </Box>
         </Box>
       )}
+
+      {/* Modal Création Démo Accueil */}
+      <CreateDemoTrackModal
+        isOpen={isDemoModalOpen}
+        onClose={() => setIsDemoModalOpen(false)}
+        onSuccess={loadTracks}
+        notify={notify}
+      />
     </Stack>
   );
 }

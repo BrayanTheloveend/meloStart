@@ -35,7 +35,7 @@ export async function POST(req) {
     const body = await req.json().catch(() => ({}));
     const directives = buildHarmonizedMusicDirectives(body);
 
-    const { duration = 60, callBackUrl } = body;
+    const { duration, callBackUrl } = body;
     const cleanPrompt = directives.rawPrompt;
 
     if (!cleanPrompt && !directives.lyrics && !directives.genre) {
