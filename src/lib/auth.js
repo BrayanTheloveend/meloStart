@@ -26,6 +26,7 @@ export const authOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),
@@ -34,6 +35,7 @@ export const authOptions = {
           GitHubProvider({
             clientId: process.env.GITHUB_CLIENT_ID,
             clientSecret: process.env.GITHUB_CLIENT_SECRET,
+            allowDangerousEmailAccountLinking: true,
           }),
         ]
       : []),
@@ -92,8 +94,23 @@ export const authOptions = {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
-        token.credits = user.credits;
+        token.role = user.role || "USER";
+        token.credits = user.credits ?? 10;
+      }
+
+      // Si le token n'a pas encore le role ou les crédits (ex: connexion Google OAuth)
+      if ((!token.id || !token.role || token.credits === undefined) && token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: { id: true, role: true, credits: true },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role || "USER";
+            token.credits = dbUser.credits ?? 10;
+          }
+        } catch (_) {}
       }
 
       // Mise à jour dynamique du token lors des mutations client (ex: après achat de notes)
@@ -106,8 +123,8 @@ export const authOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.credits = token.credits;
+        session.user.role = token.role || "USER";
+        session.user.credits = token.credits ?? 10;
       }
       return session;
     },

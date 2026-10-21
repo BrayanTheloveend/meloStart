@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button, HStack, Spinner, Text } from "@chakra-ui/react";
 
+import { signIn } from "next-auth/react";
+
 export function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
@@ -28,30 +30,27 @@ export function GoogleIcon() {
 
 export default function GoogleButton({
   label = "Continuer avec Google",
+  callbackUrl,
   onSuccess,
 }) {
   const [loading, setLoading] = useState(false);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     setLoading(true);
-    // Simuler une connexion Google rapide (0.6s)
-    setTimeout(() => {
-      try {
-        localStorage.setItem(
-          "melostars_user",
-          JSON.stringify({
-            name: "Alex Creator",
-            email: "alex.creator@gmail.com",
-            provider: "google",
-            avatar:
-              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80",
-          })
-        );
-      } catch {}
-      if (onSuccess) {
-        onSuccess({ email: "alex.creator@gmail.com", name: "Alex Creator" });
-      }
-    }, 600);
+    try {
+      const searchParams =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search)
+          : null;
+      const targetUrl =
+        callbackUrl || searchParams?.get("callbackUrl") || "/studio";
+
+      // Appel réel OAuth Google via NextAuth (redirection vers Google)
+      await signIn("google", { callbackUrl: targetUrl });
+    } catch (err) {
+      console.error("[Google OAuth] Erreur d'initialisation:", err);
+      setLoading(false);
+    }
   };
 
   return (
