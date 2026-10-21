@@ -3,7 +3,7 @@ import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductCredits, refundCredits, DEFAULT_TRACK_COST } from "@/lib/credits";
 import { saveBufferToPublic, getPlayableAudioBuffer } from "@/lib/storage";
-import { generateSunoMusic } from "@/lib/sunoService";
+import { generateSunoMusic, buildHarmonizedMusicDirectives } from "@/lib/sunoService";
 import { addTrackGenerationJob } from "@/lib/queue";
 
 /**
@@ -31,42 +31,14 @@ export async function POST(req) {
 
     const userId = session.user.id;
 
-    // 2. Extraction des paramètres
+    // 2. Harmonisation intelligente de l'ensemble des paramètres musicaux
     const body = await req.json().catch(() => ({}));
-    const {
-      prompt = "",
-      genre = "Pop",
-      style = "",
-      moods = ["Joyeux"],
-      vocalType = "female",
-      language = "Français",
-      lyrics = "",
-      customLyrics = "",
-      title: customTitle = "",
-      customMode,
-      instrumental,
-      model = "V6",
-      imageUrls = [],
-      videoUrls = [],
-      audioUrls = [],
-      callBackUrl,
-    } = body;
+    const directives = buildHarmonizedMusicDirectives(body);
 
-    const cleanPrompt = prompt.trim();
-    const finalLyrics = (customLyrics || lyrics || "").trim();
-    const finalStyle = (style || genre || "").trim();
+    const { duration = 60, callBackUrl } = body;
+    const cleanPrompt = directives.rawPrompt;
 
-    const isCustom =
-      typeof customMode === "boolean"
-        ? customMode
-        : Boolean(finalLyrics || finalStyle || customTitle || negativeTags);
-
-    const isInstrumental =
-      typeof instrumental === "boolean"
-        ? instrumental
-        : vocalType === "instrumental";
-
-    if (!cleanPrompt && !finalLyrics && !finalStyle) {
+    if (!cleanPrompt && !directives.lyrics && !directives.genre) {
       return NextResponse.json(
         {
           error:
@@ -76,21 +48,8 @@ export async function POST(req) {
       );
     }
 
-    // Dérivation du titre de la piste
-    let title = (customTitle || "").trim();
-    if (!title) {
-      const words = cleanPrompt
-        ? cleanPrompt.split(/\s+/).slice(0, 4).join(" ")
-        : `${finalStyle || "Morceau"} Track`;
-      title = (words.charAt(0).toUpperCase() + words.slice(1)).slice(0, 80);
-    }
-
-    let resolvedVocalGender = vocalGender;
-    if (!resolvedVocalGender && vocalType) {
-      if (vocalType === "male") resolvedVocalGender = "m";
-      if (vocalType === "female") resolvedVocalGender = "f";
-    }
-
+    const title = directives.title;
+    const model = directives.model;
     const cost = DEFAULT_TRACK_COST; // 2 notes
 
     // 3. Déduction atomique des crédits utilisateur
@@ -98,7 +57,13 @@ export async function POST(req) {
     try {
       transactionResult = await deductCredits(userId, cost, {
         description: `Génération IA Suno (${model}) : "${title}"`,
-        metadata: { genre: finalStyle, duration, vocalType, model },
+        metadata: {
+          genre: directives.genre,
+          duration,
+          vocalType: directives.vocalType,
+          model,
+          customMode: directives.customMode,
+        },
       });
     } catch (creditError) {
       if (creditError.code === "INSUFFICIENT_CREDITS") {
@@ -122,12 +87,12 @@ export async function POST(req) {
         data: {
           userId,
           title,
-          prompt: cleanPrompt || null,
-          lyrics: finalLyrics || null,
-          genre: finalStyle,
-          moods: Array.isArray(moods) ? moods : [moods],
-          vocalType,
-          language,
+          prompt: cleanPrompt || directives.prompt,
+          lyrics: directives.lyrics || null,
+          genre: directives.genre,
+          moods: directives.moods,
+          vocalType: directives.vocalType,
+          language: directives.language,
           duration: Number(duration) || 60,
           status: "PROCESSING",
           progress: 15,
@@ -147,17 +112,17 @@ export async function POST(req) {
       bullJob = await addTrackGenerationJob({
         trackId: track.id,
         userId,
-        prompt: cleanPrompt,
-        genre: finalStyle,
-        moods: Array.isArray(moods) ? moods : [moods],
-        vocalType,
-        language,
+        prompt: cleanPrompt || directives.prompt,
+        genre: directives.genre,
+        moods: directives.moods,
+        vocalType: directives.vocalType,
+        language: directives.language,
         duration: Number(duration) || 60,
-        lyrics: finalLyrics,
+        lyrics: directives.lyrics,
         title,
-        model: model || "V6",
-        isCustom,
-        isInstrumental,
+        model,
+        isCustom: directives.customMode,
+        isInstrumental: directives.instrumental,
       });
       if (bullJob) {
         console.log(`[BullMQ] ✅ Job #${bullJob.id} inséré dans la file "music-generation" (Redis).`);
@@ -176,25 +141,19 @@ export async function POST(req) {
 
     try {
       console.log(`[API Generate] Appel Suno API (${model}) pour la piste ${track.id}...`);
+      console.log(`[API Generate] Mode: ${directives.customMode ? "Custom (Paroles)" : "Standard (Prompt riche)"}`);
+
       sunoTask = await generateSunoMusic({
-        prompt: cleanPrompt,
-        lyrics: finalLyrics,
-        style: finalStyle,
+        prompt: directives.prompt,
+        lyrics: directives.lyrics,
+        style: directives.style,
         title,
-        customMode: isCustom,
-        instrumental: isInstrumental,
-        model: model || "V6",
+        customMode: directives.customMode,
+        instrumental: directives.instrumental,
+        model,
         callBackUrl: webhookUrl,
-        negativeTags,
-        vocalGender: resolvedVocalGender,
-        duration: Number(duration) || 60,
-        variety: Number(variety) || 1,
-        styleWeight,
-        weirdnessConstraint,
-        audioWeight,
-        imageUrls,
-        videoUrls,
-        audioUrls,
+        negativeTags: directives.negativeTags,
+        vocalGender: directives.vocalType === "male" ? "m" : directives.vocalType === "female" ? "f" : null,
       });
 
       console.log(`[API Generate] ✅ Tâche Suno démarrée. Task ID : ${sunoTask.taskId}`);
@@ -275,7 +234,7 @@ export async function POST(req) {
           buffer: audioData.buffer,
           key: fileKey,
           contentType: audioData.contentType || "audio/mpeg",
-          metadata: { userId, trackId: track.id, genre: finalStyle || "Pop" },
+          metadata: { userId, trackId: track.id, genre: directives.genre || "Pop" },
         });
 
         await prisma.track.update({
