@@ -389,7 +389,7 @@ export default function AdminDashboardPage() {
                 Statut de l'infrastructure
               </Text>
               <Text fontSize="xs" color="ink.500">
-                Monitoring Asynchrone, Suno API & Base de données
+                Monitoring BullMQ, Redis, PostgreSQL & Suno AI
               </Text>
             </Stack>
             <HStack gap="1.5" px="2.5" py="1" rounded="full" bg="green.50" border="1px solid" borderColor="green.200">
@@ -409,8 +409,8 @@ export default function AdminDashboardPage() {
               (systemServices.length > 0
                 ? systemServices
                 : [
+                    { id: "bullmq", name: "File d'attente BullMQ & Redis", status: "ONLINE", details: "File 'music-generation' (Port 6379)" },
                     { id: "suno", name: "Suno AI API (sunoapi.org)", status: "ONLINE", details: "Modèle Suno V6 Master HD" },
-                    { id: "async", name: "Pipeline Asynchrone (Webhooks)", status: "ONLINE", details: "Mode Stateless sans Redis" },
                     { id: "pg", name: "Base PostgreSQL & Prisma", status: "ONLINE", details: "Données persistantes melostars" },
                   ]
               ).map((s) => (

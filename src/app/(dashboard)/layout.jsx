@@ -90,8 +90,8 @@ const NAV_GROUPS = [
       {
         href: "/dashboard/system",
         icon: LuServer,
-        label: "Santé Système & Webhook",
-        badge: null,
+        label: "Santé BullMQ & Redis",
+        badge: "BullMQ",
         badgeColor: "green.500",
       },
       {
@@ -314,7 +314,7 @@ export default function AdminDashboardLayout({ children }) {
               </Text>
             </HStack>
             <Text fontSize="11px" color="ink.500">
-              PostgreSQL, Webhook & Stockage local opérationnels.
+              PostgreSQL, BullMQ & Redis opérationnels.
             </Text>
           </Box>
 

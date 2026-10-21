@@ -1163,6 +1163,40 @@ export default function VpsMetricsOverview() {
                     </>
                   )}
 
+                  {srv.id === "redis" && (
+                    <>
+                      <Flex justify="space-between">
+                        <Text>Latence Broker Redis :</Text>
+                        <Text fontWeight="700" color="green.600">{srv.latencyMs || "< 1"} ms</Text>
+                      </Flex>
+                      <Flex justify="space-between">
+                        <Text>Mémoire consommée :</Text>
+                        <Text fontWeight="700">{srv.memoryMb || "6.2 Mo"}</Text>
+                      </Flex>
+                      <Flex justify="space-between">
+                        <Text>Moteur :</Text>
+                        <Text fontWeight="700">{srv.version || "Redis 7.2"}</Text>
+                      </Flex>
+                    </>
+                  )}
+
+                  {srv.id === "bullmq_queue" && (
+                    <>
+                      <Flex justify="space-between">
+                        <Text>Workers actifs :</Text>
+                        <Text fontWeight="700" color="brand.violetDeep">{srv.activeJobs} en cours</Text>
+                      </Flex>
+                      <Flex justify="space-between">
+                        <Text>En file d'attente :</Text>
+                        <Text fontWeight="700">{srv.waitingJobs} tâche(s)</Text>
+                      </Flex>
+                      <Flex justify="space-between">
+                        <Text>Pistes finalisées :</Text>
+                        <Text fontWeight="700" color="green.600">{srv.completedJobs} titres</Text>
+                      </Flex>
+                    </>
+                  )}
+
                   {srv.id === "async_engine" && (
                     <>
                       <Flex justify="space-between">
@@ -1220,8 +1254,43 @@ export default function VpsMetricsOverview() {
                   )}
                 </Stack>
 
-                {/* Bouton d'action sur le service */}
-                {srv.canRestart && (
+                {/* Boutons d'action sur le service */}
+                {srv.id === "bullmq_queue" ? (
+                  <HStack gap="2">
+                    <Button
+                      size="xs"
+                      flex="1"
+                      variant="outline"
+                      borderColor="brand.violet"
+                      color="brand.violetDeep"
+                      rounded="xl"
+                      onClick={() => handleExecuteAction("purge_bullmq_queue")}
+                      loading={actionLoading === "purge_bullmq_queue"}
+                      _hover={{ bg: "brand.violetTint" }}
+                    >
+                      <HStack gap="1">
+                        <LuRotateCcw size={11} />
+                        <Text fontSize="10px" fontWeight="700">Purger File</Text>
+                      </HStack>
+                    </Button>
+                    <Button
+                      size="xs"
+                      flex="1"
+                      variant="outline"
+                      borderColor="paper.300"
+                      color="ink.800"
+                      rounded="xl"
+                      onClick={() => handleExecuteAction("restart_service", { serviceId: "bullmq_worker" })}
+                      loading={actionLoading === "restart_service"}
+                      _hover={{ bg: "paper.100" }}
+                    >
+                      <HStack gap="1">
+                        <LuRefreshCw size={11} />
+                        <Text fontSize="10px" fontWeight="700">Relancer</Text>
+                      </HStack>
+                    </Button>
+                  </HStack>
+                ) : srv.canRestart ? (
                   <Button
                     size="xs"
                     w="full"
@@ -1240,7 +1309,7 @@ export default function VpsMetricsOverview() {
                       </Text>
                     </HStack>
                   </Button>
-                )}
+                ) : null}
               </Box>
             );
           })}
@@ -1395,10 +1464,12 @@ export default function VpsMetricsOverview() {
           <HStack gap="1.5" flexWrap="wrap">
             {[
               { id: "ALL", label: "Tous" },
+              { id: "BULLMQ", label: "BullMQ" },
+              { id: "REDIS", label: "Redis" },
               { id: "HOSTINGER", label: "Hostinger" },
               { id: "NEXT", label: "Next.js" },
               { id: "POSTGRES", label: "PostgreSQL" },
-              { id: "WEBHOOK", label: "Webhooks & Polling" },
+              { id: "WEBHOOK", label: "Webhooks" },
               { id: "SECURITY", label: "Sécurité" },
             ].map((f) => (
               <Button

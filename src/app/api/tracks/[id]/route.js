@@ -4,11 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { refundCredits } from "@/lib/credits";
 import { deletePublicFile } from "@/lib/storage";
 import { getSunoTaskStatus } from "@/lib/sunoService";
+import { getTrackJobState } from "@/lib/queue";
 
 /**
  * GET /api/tracks/[id]
- * Endpoint de Polling asynchrone client (sans Redis).
- * Récupère l'avancement de la piste et synchronise l'état avec Suno API si nécessaire.
+ * Endpoint de synchronisation et polling client avec BullMQ & Suno API.
+ * Récupère l'avancement de la piste et synchronise l'état avec la file Redis ou Suno API.
  */
 export async function GET(req, { params }) {
   try {
@@ -28,7 +29,7 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Morceau introuvable." }, { status: 404 });
     }
 
-    // Polling asynchrone : si le morceau est en cours et lié à Suno API
+    // Polling asynchrone : si le morceau est en cours et lié à Suno API ou BullMQ
     let jobInfo = null;
     if (["QUEUED", "PROCESSING"].includes(track.status) && track.jobId) {
       const isSunoJob = track.jobId.startsWith("suno_");
@@ -79,7 +80,22 @@ export async function GET(req, { params }) {
           // Erreur réseau temporaire vers Suno, le polling client retentera au prochain cycle
         }
       } else {
-        jobInfo = { provider: "local_async", status: track.status, progress: track.progress };
+        // Consultation de l'état dans la file BullMQ
+        try {
+          const bullmqState = await getTrackJobState(track.jobId);
+          if (bullmqState) {
+            jobInfo = {
+              provider: "bullmq_queue",
+              status: bullmqState.state,
+              progress: bullmqState.progress || track.progress,
+              jobId: bullmqState.id,
+            };
+          } else {
+            jobInfo = { provider: "bullmq_local", status: track.status, progress: track.progress };
+          }
+        } catch (_) {
+          jobInfo = { provider: "bullmq_local", status: track.status, progress: track.progress };
+        }
       }
     }
 

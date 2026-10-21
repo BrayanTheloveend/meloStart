@@ -87,16 +87,17 @@ export default function AdminSystemPage() {
     });
   };
 
-  const handleCleanQueue = () => {
+  const handleCleanQueue = async () => {
     setCleaningQueue(true);
-    setTimeout(() => {
+    try {
+      const res = await api.post("/api/admin/system", { action: "purge_queue" });
+      await loadSystemDiagnostics();
+      notify(res?.message || "File d'attente BullMQ purgée avec succès.");
+    } catch (err) {
+      notify(`Erreur purge: ${err.message}`, "error");
+    } finally {
       setCleaningQueue(false);
-      setLogs((prev) => [
-        `[${new Date().toLocaleTimeString("fr-FR")}] [SYNC_CHECK] Synchronisation du pipeline asynchrone validée avec succès.`,
-        ...prev,
-      ]);
-      notify("Pipeline asynchrone synchronisé avec succès.");
-    }, 600);
+    }
   };
 
   const isSunoExhausted = suno && suno.creditsRemaining === 0;
@@ -132,14 +133,14 @@ export default function AdminSystemPage() {
         <Stack gap="1">
           <HStack gap="2" wrap="wrap">
             <Text fontFamily="heading" fontWeight="800" fontSize={{ base: "2xl", md: "3xl" }} letterSpacing="-0.03em">
-              Santé Système, Cloud & Suno AI
+              Santé Système, BullMQ, Redis & Suno AI
             </Text>
             <Badge colorPalette="green" size="sm" rounded="full" px="2.5" py="0.5">
               Infrastructure Opérationnelle
             </Badge>
           </HStack>
           <Text color="ink.500" fontSize="sm">
-            Télémétrie en direct de l'API Suno (sunoapi.org), PostgreSQL, des Webhooks asynchrones et du stockage local.
+            Télémétrie en direct de l'API Suno (sunoapi.org), de la file d'attente BullMQ, du broker Redis (port 6379) et de PostgreSQL.
           </Text>
         </Stack>
 
@@ -154,7 +155,7 @@ export default function AdminSystemPage() {
           >
             <HStack gap="2">
               <LuWifi size={14} />
-              <Text>Tester Connexions & Suno</Text>
+              <Text>Tester Connexions & Redis</Text>
             </HStack>
           </Button>
 
@@ -168,7 +169,7 @@ export default function AdminSystemPage() {
           >
             <HStack gap="2">
               <LuRefreshCcw size={14} />
-              <Text>Purger la File</Text>
+              <Text>Purger la File BullMQ</Text>
             </HStack>
           </Button>
         </HStack>
@@ -443,61 +444,71 @@ export default function AdminSystemPage() {
       </Box>
 
       {/* ========================================================= */}
-      {/* 3. ARCHITECTURE ASYNCHRONE : WEBHOOK & POLLING            */}
+      {/* 3. FILE D'ATTENTE BULLMQ & BROKER REDIS (PORT 6379)       */}
       {/* ========================================================= */}
       <Box p="6" rounded="3xl" bg="paper.0" border="1px solid" borderColor="paper.200">
         <Flex justify="space-between" align="center" mb="4" flexWrap="wrap" gap="2">
           <Stack gap="0.5">
-            <Text fontFamily="heading" fontWeight="700" fontSize="lg">
-              Architecture Asynchrone : Webhooks & Polling (Sans Redis)
-            </Text>
+            <HStack gap="2" wrap="wrap">
+              <Text fontFamily="heading" fontWeight="700" fontSize="lg">
+                File d'Attente BullMQ & Moteur Redis (Port 6379)
+              </Text>
+              <Badge bg="purple.50" color="purple.700" px="2" py="0.5" rounded="full" fontWeight="700" fontSize="10px" border="1px solid" borderColor="purple.200">
+                100% Gratuit & Open-Source
+              </Badge>
+            </HStack>
             <Text fontSize="xs" color="ink.500">
-              Traitement découplé et résilient sans dépendance à Redis ni workers BullMQ.
+              Traitement asynchrone distribué avec gestion de concurrence, retries automatiques et suivi de progression en temps réel.
             </Text>
           </Stack>
-          <Badge bg="green.50" color="green.700" px="2.5" py="1" rounded="full" fontWeight="700" fontSize="xs" border="1px solid" borderColor="green.200">
-            Stateless PostgreSQL
-          </Badge>
+          <HStack gap="2">
+            <Badge bg="green.50" color="green.700" px="2.5" py="1" rounded="full" fontWeight="700" fontSize="xs" border="1px solid" borderColor="green.200">
+              Redis Broker Actif
+            </Badge>
+            <Badge bg="brand.violetTint" color="brand.violetDeep" px="2.5" py="1" rounded="full" fontWeight="700" fontSize="xs">
+              Concurrence: 2 workers
+            </Badge>
+          </HStack>
         </Flex>
 
         <SimpleGrid columns={{ base: 2, sm: 4 }} gap="4" mb="6">
           <Box p="4" rounded="2xl" bg="blue.50" border="1px solid" borderColor="blue.100">
-            <Text fontSize="xs" fontWeight="700" color="blue.700">EN COURS (POLLING ACTIF)</Text>
+            <Text fontSize="xs" fontWeight="700" color="blue.700">EN COURS (WORKERS ACTIFS)</Text>
             <Text fontFamily="heading" fontWeight="800" fontSize="2xl" color="blue.900" mt="1">
-              {queueStats.active} piste{queueStats.active > 1 ? "s" : ""}
+              {queueStats.active} tâche{queueStats.active > 1 ? "s" : ""}
             </Text>
             <Text fontSize="10px" color="blue.600" mt="1">
-              /api/tracks/[id]
+              File music-generation
             </Text>
           </Box>
 
           <Box p="4" rounded="2xl" bg="amber.50" border="1px solid" borderColor="amber.100">
-            <Text fontSize="xs" fontWeight="700" color="amber.700">EN ATTENTE (INITIÉES)</Text>
+            <Text fontSize="xs" fontWeight="700" color="amber.700">EN ATTENTE (REDIS QUEUE)</Text>
             <Text fontFamily="heading" fontWeight="800" fontSize="2xl" color="amber.900" mt="1">
-              {queueStats.waiting} piste{queueStats.waiting > 1 ? "s" : ""}
+              {queueStats.waiting} tâche{queueStats.waiting > 1 ? "s" : ""}
             </Text>
             <Text fontSize="10px" color="amber.600" mt="1">
-              PostgreSQL
+              Priorité FIFO BullMQ
             </Text>
           </Box>
 
           <Box p="4" rounded="2xl" bg="green.50" border="1px solid" borderColor="green.100">
-            <Text fontSize="xs" fontWeight="700" color="green.700">FINALISÉES AVEC SUCCÈS</Text>
+            <Text fontSize="xs" fontWeight="700" color="green.700">TERMINÉES AVEC SUCCÈS</Text>
             <Text fontFamily="heading" fontWeight="800" fontSize="2xl" color="green.900" mt="1">
               {formatMetric(queueStats.completed || 0)} titres
             </Text>
             <Text fontSize="10px" color="green.600" mt="1">
-              Webhooks acquittés
+              Masters audio générés
             </Text>
           </Box>
 
           <Box p="4" rounded="2xl" bg="red.50" border="1px solid" borderColor="red.100">
-            <Text fontSize="xs" fontWeight="700" color="red.700">ÉCHECS (REMBOURSÉS)</Text>
+            <Text fontSize="xs" fontWeight="700" color="red.700">ÉCHECS (AUTO-RETRY)</Text>
             <Text fontFamily="heading" fontWeight="800" fontSize="2xl" color="red.900" mt="1">
-              {queueStats.failed} titre{queueStats.failed > 1 ? "s" : ""}
+              {queueStats.failed} tâche{queueStats.failed > 1 ? "s" : ""}
             </Text>
             <Text fontSize="10px" color="red.600" mt="1">
-              Notes restituées
+              3 essais avec backoff
             </Text>
           </Box>
         </SimpleGrid>
@@ -505,7 +516,7 @@ export default function AdminSystemPage() {
         <HStack gap="2" p="3" bg="paper.50" rounded="xl" border="1px solid" borderColor="paper.200" fontSize="xs" color="ink.600">
           <Box w="6px" h="6px" rounded="full" bg="green.500" />
           <Text>
-            <b>Point d'entrée Webhook actif :</b> <span style={{ fontFamily: "monospace" }}>/api/webhooks/suno</span> • Les serveurs Suno AI notifient le webhook en fin de composition pendant que le client effectue un polling léger.
+            <b>Architecture BullMQ & Redis active :</b> Queue <span style={{ fontFamily: "monospace" }}>music-generation</span> sur <span style={{ fontFamily: "monospace" }}>redis://localhost:6379</span>. Workers démarrables via <span style={{ fontFamily: "monospace" }}>npm run worker</span> avec bascule transparente vers les Webhooks Suno.
           </Text>
         </HStack>
       </Box>

@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "worker": "node workers/musicProcessor.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

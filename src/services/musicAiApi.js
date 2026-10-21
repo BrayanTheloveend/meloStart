@@ -1,7 +1,7 @@
 /**
  * Service API pour la génération de musique par IA.
- * Connecté à l'API route Next.js /api/tracks/generate avec Webhooks asynchrones et Polling
- * (Architecture Stateless sans Redis).
+ * Connecté à l'API route Next.js /api/tracks/generate orchestrée par BullMQ & Redis
+ * avec synchronisation en direct par Polling et Webhooks Suno.
  * 
  * Règle économique : 1 chanson = 2 Notes
  */

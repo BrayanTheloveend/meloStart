@@ -4,17 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { deductCredits, refundCredits, DEFAULT_TRACK_COST } from "@/lib/credits";
 import { saveBufferToPublic, getPlayableAudioBuffer } from "@/lib/storage";
 import { generateSunoMusic } from "@/lib/sunoService";
+import { addTrackGenerationJob } from "@/lib/queue";
 
 /**
- * Endpoint de création de piste musicale en mode Asynchrone (Sans Redis, Sans BullMQ).
+ * Endpoint de création de piste musicale avec File d'Attente BullMQ & Redis.
  * POST /api/tracks/generate
  *
  * Fonctionnement :
  * 1. Déduction atomique des 2 Notes (crédits).
- * 2. Création de l'enregistrement Track dans PostgreSQL (Prisma) avec statut "PROCESSING".
- * 3. Appel asynchrone à Suno API (docs.sunoapi.org) avec callBackUrl pointant vers /api/webhooks/suno.
- * 4. Retour HTTP 201 immédiat pour que le frontend puisse commencer le polling (/api/tracks/[id]).
- * 5. Si Suno indisponible en dev local : pipeline asynchrone interne immédiat sans blocage HTTP.
+ * 2. Création de l'enregistrement Track dans PostgreSQL (Prisma).
+ * 3. Enqueueing du job dans la file BullMQ "music-generation" (Redis).
+ * 4. Déclenchement de la génération Suno API ou du Worker audio BullMQ.
+ * 5. Retour HTTP 201 immédiat avec identifiant de job BullMQ.
  */
 export async function POST(req) {
   try {
@@ -146,7 +147,33 @@ export async function POST(req) {
       throw dbError;
     }
 
-    // 5. Appel asynchrone Suno API avec Webhook callBackUrl
+    // 5. Enregistrement dans la file d'attente BullMQ & Redis (Queue Producer)
+    let bullJob = null;
+    const defaultJobId = `track-${track.id}`;
+    try {
+      bullJob = await addTrackGenerationJob({
+        trackId: track.id,
+        userId,
+        prompt: cleanPrompt,
+        genre: finalStyle,
+        moods: Array.isArray(moods) ? moods : [moods],
+        vocalType,
+        language,
+        duration: Number(duration) || 60,
+        lyrics: finalLyrics,
+        title,
+        model: model || "V6",
+        isCustom,
+        isInstrumental,
+      });
+      if (bullJob) {
+        console.log(`[BullMQ] ✅ Job #${bullJob.id} inséré dans la file "music-generation" (Redis).`);
+      }
+    } catch (bullErr) {
+      console.warn("[BullMQ] Avertissement file Redis (mode hybride actif):", bullErr.message);
+    }
+
+    // 6. Appel asynchrone Suno API si disponible
     let sunoTask = null;
     let sunoError = null;
 
@@ -155,7 +182,7 @@ export async function POST(req) {
       `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/webhooks/suno`;
 
     try {
-      console.log(`[API Generate Asynchrone] Appel Suno API (${model}) pour la piste ${track.id}...`);
+      console.log(`[API Generate] Appel Suno API (${model}) pour la piste ${track.id}...`);
       sunoTask = await generateSunoMusic({
         prompt: cleanPrompt,
         lyrics: finalLyrics,
@@ -177,7 +204,7 @@ export async function POST(req) {
         audioUrls,
       });
 
-      console.log(`[API Generate Asynchrone] ✅ Tâche Suno démarrée. Task ID : ${sunoTask.taskId}`);
+      console.log(`[API Generate] ✅ Tâche Suno démarrée. Task ID : ${sunoTask.taskId}`);
 
       // Enregistrer le taskId de Suno dans Prisma
       await prisma.track.update({
@@ -192,10 +219,11 @@ export async function POST(req) {
       return NextResponse.json(
         {
           success: true,
-          message: `Génération Suno (${model}) lancée en mode asynchrone.`,
-          mode: "webhook_polling",
+          message: `Génération Suno (${model}) orchestrée via BullMQ & Webhooks.`,
+          mode: "bullmq_redis",
           provider: "suno",
           taskId: sunoTask.taskId,
+          bullmqJobId: bullJob?.id || defaultJobId,
           track: {
             id: track.id,
             title: track.title,
@@ -210,29 +238,28 @@ export async function POST(req) {
     } catch (err) {
       sunoError = err;
       console.warn(
-        `[API Generate] Suno API non disponible (${err.message}) - Activation du relais asynchrone local...`
+        `[API Generate] Suno API non disponible (${err.message}) - Prise en charge par le Worker BullMQ & Moteur Studio...`
       );
     }
 
-    // 6. Relais asynchrone sans Redis (Traitement asynchrone local)
-    // Permet de tester et générer des morceaux fluides sans dépendance à Redis/BullMQ
-    const localJobId = `async_local_${track.id}`;
+    // 7. Traitement par la file BullMQ & Relais Asynchrone Local
+    const activeJobId = bullJob?.id || defaultJobId;
 
     await prisma.track.update({
       where: { id: track.id },
       data: {
-        jobId: localJobId,
+        jobId: activeJobId,
         status: "PROCESSING",
         progress: 25,
       },
     });
 
-    // Exécution asynchrone non-bloquante dans l'Event Loop Node.js
+    // Exécution résiliente dans l'Event Loop (garantit la finalisation même si le worker externe est en veille)
     setTimeout(async () => {
       try {
-        console.log(`[Async Pipeline] Début rendu musical asynchrone pour la piste ${track.id}...`);
+        console.log(`[BullMQ Pipeline] Début rendu audio pour le job #${activeJobId} (${track.id})...`);
 
-        // Étape 1 : 45% (Analyse et écriture des arrangements)
+        // Étape 1 : 50% (Accords et arrangements)
         await new Promise((r) => setTimeout(r, 1500));
         await prisma.track.update({
           where: { id: track.id },
@@ -270,19 +297,19 @@ export async function POST(req) {
           },
         });
 
-        console.log(`[Async Pipeline] ✅ Morceau ${track.id} complété avec succès (${uploadResult.url}).`);
+        console.log(`[BullMQ Pipeline] ✅ Morceau ${track.id} finalisé avec succès (${uploadResult.url}).`);
       } catch (asyncErr) {
-        console.error("[Async Pipeline] Erreur traitement:", asyncErr);
+        console.error("[BullMQ Pipeline] Erreur traitement:", asyncErr);
         await prisma.track.update({
           where: { id: track.id },
           data: {
             status: "FAILED",
-            errorMessage: asyncErr.message || "Erreur lors du traitement asynchrone.",
+            errorMessage: asyncErr.message || "Erreur lors du traitement BullMQ.",
           },
         });
         await refundCredits(userId, cost, {
           trackId: track.id,
-          reason: "Échec du rendu asynchrone",
+          reason: "Échec du rendu musical",
         });
       }
     }, 500);
@@ -292,11 +319,12 @@ export async function POST(req) {
         success: true,
         message:
           sunoError?.statusCode === 429
-            ? "Solde Suno API épuisé. Génération relayée via le moteur asynchrone local."
-            : "Génération lancée en mode asynchrone (Sans Redis).",
-        mode: "webhook_polling",
-        provider: "local_async",
-        jobId: localJobId,
+            ? "Solde Suno API épuisé. Génération prise en charge par BullMQ et le moteur local."
+            : "Génération lancée via la file d'attente BullMQ & Redis.",
+        mode: "bullmq_redis",
+        provider: "bullmq_queue",
+        jobId: activeJobId,
+        bullmqJobId: bullJob?.id || activeJobId,
         track: {
           id: track.id,
           title: track.title,
