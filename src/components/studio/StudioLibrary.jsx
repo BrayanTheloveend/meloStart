@@ -5,6 +5,7 @@ import { Badge, Box, Button, Center, Flex, Grid, HStack, IconButton, Input, Spin
 import { LuClock, LuDownload, LuHeart, LuMusic, LuPause, LuPlay, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu";
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
+import { downloadTrackAudio } from "@/lib/downloadTrack";
 
 export default function StudioLibrary({
   library = [],
@@ -20,17 +21,8 @@ export default function StudioLibrary({
   const [filterGenre, setFilterGenre] = useState("all");
 
   const handleDownloadTrack = (track) => {
-    if (track.audioUrl) {
-      const a = document.createElement("a");
-      a.href = track.audioUrl;
-      a.download = `${track.title || "melostars-track"}.mp3`;
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } else {
-      alert(`Téléchargement de « ${track.title} » au format MP3 en cours…`);
-    }
+    if (!track) return;
+    downloadTrackAudio(track);
   };
 
   const genres = ["all", "Afrobeat", "Pop", "Rap", "Électro", "Folk", "Lo-fi"];

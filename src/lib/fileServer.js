@@ -54,10 +54,12 @@ function toWebStream(nodeStream) {
   });
 }
 
+export { MIME_TYPES, toWebStream, findTargetFile };
+
 /**
  * Recherche l'existence d'un fichier parmi les répertoires de stockage potentiels
  */
-function findTargetFile(segments) {
+export function findTargetFile(segments) {
   const cwd = process.cwd();
   const cleanSegments = [...segments];
 
@@ -132,6 +134,19 @@ export async function handleServeFile(req, rawPathSegments) {
     const ext = path.extname(normalizedFile).toLowerCase();
     const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
+    // Détection de la demande de téléchargement direct (?download=1 ou ?download=true ou ?dl=1)
+    let isDownload = false;
+    let customFilename = path.basename(normalizedFile);
+    try {
+      const parsedUrl = new URL(req.url);
+      isDownload =
+        parsedUrl.searchParams.get("download") === "1" ||
+        parsedUrl.searchParams.get("download") === "true" ||
+        parsedUrl.searchParams.has("dl");
+      const nameParam = parsedUrl.searchParams.get("filename");
+      if (nameParam) customFilename = nameParam;
+    } catch (_) {}
+
     // En-têtes standards CORS et cache
     const baseHeaders = {
       "Content-Type": contentType,
@@ -139,8 +154,14 @@ export async function handleServeFile(req, rawPathSegments) {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
       "Access-Control-Allow-Headers": "Range, Content-Type",
-      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      "Cache-Control": isDownload ? "private, no-cache" : "public, max-age=86400, stale-while-revalidate=604800",
     };
+
+    if (isDownload) {
+      const sanitizedName = customFilename.replace(/["\r\n]/g, "_");
+      baseHeaders["Content-Disposition"] = `attachment; filename="${sanitizedName}"; filename*=UTF-8''${encodeURIComponent(sanitizedName)}`;
+      baseHeaders["Content-Description"] = "File Transfer";
+    }
 
     // Prise en charge des requêtes HEAD (souvent émises par les lecteurs multimédia)
     if (req.method === "HEAD") {

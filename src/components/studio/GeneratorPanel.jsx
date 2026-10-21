@@ -41,6 +41,7 @@ import {
 import Waveform from "@/components/common/Waveform";
 import { generateMusicWithAI, NOTES_PER_SONG } from "@/services/musicAiApi";
 import { accent } from "@/theme/system";
+import { downloadTrackAudio } from "@/lib/downloadTrack";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
@@ -996,12 +997,7 @@ export default function GeneratorPanel({
                     variant="outline"
                     borderColor="paper.300"
                     color="ink.700"
-                    onClick={() => {
-                      const link = document.createElement("a");
-                      link.href = generatedTrack.audioUrl || "#";
-                      link.download = `${generatedTrack.title}.mp3`;
-                      link.click();
-                    }}
+                    onClick={() => downloadTrackAudio(generatedTrack)}
                     gap="1.5"
                   >
                     <LuDownload size={13} /> Télécharger MP3

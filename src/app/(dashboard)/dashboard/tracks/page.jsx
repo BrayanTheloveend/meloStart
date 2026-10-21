@@ -16,11 +16,12 @@ import {
   Text,
 } from "@chakra-ui/react";
 
-import { LuCheck, LuEye, LuMusic, LuPause, LuPlay, LuRotateCcw, LuSearch, LuTrash2 } from "react-icons/lu";
+import { LuCheck, LuDownload, LuEye, LuMusic, LuPause, LuPlay, LuRotateCcw, LuSearch, LuTrash2 } from "react-icons/lu";
 import { LucideAlertTriangle } from "lucide-react";
 import { api } from "@/lib/apiClient";
 import SunoMetricsOverview from "@/components/admin/SunoMetricsOverview";
 import { ShimmerTableRow } from "@/components/common/Shimmer";
+import { downloadTrackAudio } from "@/lib/downloadTrack";
 
 export default function AdminTracksPage() {
   const [tracks, setTracks] = useState([]);
@@ -386,6 +387,20 @@ export default function AdminTracksPage() {
                           <LuEye size={13} />
                         </IconButton>
 
+                        {/* Bouton Télécharger */}
+                        {t.audioUrl && (
+                          <IconButton
+                            aria-label="Télécharger"
+                            size="xs"
+                            variant="ghost"
+                            rounded="full"
+                            title="Télécharger la musique"
+                            onClick={() => downloadTrackAudio(t)}
+                          >
+                            <LuDownload size={13} />
+                          </IconButton>
+                        )}
+
                         {/* Bouton Relancer Job */}
                         {t.status === "FAILED" && (
                           <Button
@@ -510,7 +525,7 @@ export default function AdminTracksPage() {
                 </Box>
               )}
 
-              <Flex justify="space-between" align="center" mt="2">
+              <Flex justify="space-between" align="center" mt="2" gap="2" wrap="wrap">
                 <Button
                   size="sm"
                   variant="outline"
@@ -520,15 +535,30 @@ export default function AdminTracksPage() {
                   Rembourser 2 Notes
                 </Button>
 
-                <Button
-                  size="sm"
-                  rounded="xl"
-                  bg="brand.violetDeep"
-                  color="white"
-                  onClick={() => setSelectedTrackDetails(null)}
-                >
-                  Fermer
-                </Button>
+                <HStack gap="2">
+                  {selectedTrackDetails.audioUrl && (
+                    <Button
+                      size="sm"
+                      rounded="xl"
+                      variant="outline"
+                      borderColor="paper.300"
+                      color="ink.800"
+                      onClick={() => downloadTrackAudio(selectedTrackDetails)}
+                    >
+                      <LuDownload size={14} /> Télécharger MP3
+                    </Button>
+                  )}
+
+                  <Button
+                    size="sm"
+                    rounded="xl"
+                    bg="brand.violetDeep"
+                    color="white"
+                    onClick={() => setSelectedTrackDetails(null)}
+                  >
+                    Fermer
+                  </Button>
+                </HStack>
               </Flex>
             </Stack>
           </Box>

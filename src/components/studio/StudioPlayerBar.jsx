@@ -5,6 +5,7 @@ import { Box, Button, Flex, HStack, IconButton, Slider, Stack, Text } from "@cha
 import { LuDownload, LuHeart, LuPause, LuPlay, LuVolume2, LuX } from "react-icons/lu";
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
+import { downloadTrackAudio } from "@/lib/downloadTrack";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
@@ -51,17 +52,7 @@ export default function StudioPlayerBar({ track, isPlaying, onTogglePlay, onClos
 
   const handleDownload = () => {
     if (!track) return;
-    if (track.audioUrl) {
-      const a = document.createElement("a");
-      a.href = track.audioUrl;
-      a.download = `${track.title || "melostars-track"}.mp3`;
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } else {
-      alert(`Téléchargement de « ${track.title} » au format MP3 en cours…`);
-    }
+    downloadTrackAudio(track);
   };
 
   if (!track) return null;

@@ -4,6 +4,7 @@ import { Badge, Box, Button, Flex, Grid, HStack, IconButton, Stack, Text } from 
 import { LuClock, LuDownload, LuHeart, LuMusic, LuPause, LuPlay, LuPlus, LuSparkles, LuWandSparkles, LuZap } from "react-icons/lu";
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
+import { downloadTrackAudio } from "@/lib/downloadTrack";
 
 const quickPrompts = [
   { genre: "Afrobeat", title: "Vibes d'été Afrobeat", prompt: "Une chanson afrobeat rythmée et solaire pour faire danser les amis en vacances." },
@@ -288,7 +289,7 @@ export default function StudioHome({
                         variant="outline"
                         borderColor="paper.300"
                         color="ink.700"
-                        onClick={() => alert(`Téléchargement de « ${track.title} » au format MP3 en cours…`)}
+                        onClick={() => downloadTrackAudio(track)}
                       >
                         <LuDownload size={13} /> MP3
                       </Button>
