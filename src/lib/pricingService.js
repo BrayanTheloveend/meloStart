@@ -99,11 +99,11 @@ export async function getPricingPlansFromDb() {
     }
 
     // Initialisation automatique avec les plans par défaut
-    await savePricingPlansToDb(DEFAULT_PRICING_PLANS);
-    return DEFAULT_PRICING_PLANS;
+    await savePricingPlansToDb([]);
+    return [];
   } catch (error) {
     console.warn("[Pricing Service] Impossible de charger les tarifs depuis PostgreSQL, utilisation des valeurs par défaut :", error.message);
-    return DEFAULT_PRICING_PLANS;
+    return [];
   }
 }
 
