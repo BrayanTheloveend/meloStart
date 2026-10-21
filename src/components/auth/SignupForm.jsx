@@ -213,7 +213,7 @@ export default function SignupForm() {
             <Stack gap="3.5">
               {/* Nom / Pseudo */}
               <Box>
-                <Text
+                {/* <Text
                   as="label"
                   htmlFor="signup-name"
                   fontFamily="ui"
@@ -257,7 +257,7 @@ export default function SignupForm() {
                       bg: "paper.0",
                     }}
                   />
-                </Box>
+                </Box> */}
               </Box>
 
               {/* Email */}
@@ -403,17 +403,12 @@ export default function SignupForm() {
                 transition="all 0.2s ease"
               >
                 <HStack gap="2">
-                  {loading ? (
+                  {loading && (
                     <>
                       <Spinner size="sm" color="white" />
                       <Text>Création du compte...</Text>
                     </>
-                  ) : (
-                    <>
-                      <Text>Créer mon compte et recevoir 10 Notes</Text>
-                      <LuArrowRight size={16} />
-                    </>
-                  )}
+                  ) }
                 </HStack>
               </Button>
             </Stack>

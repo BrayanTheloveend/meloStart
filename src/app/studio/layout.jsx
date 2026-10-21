@@ -35,7 +35,7 @@ import { accent } from "@/theme/system";
 
 const NAV_ITEMS = [
   { id: "home", href: "/studio", icon: LuHouse, label: "Accueil", desktopLabel: "Accueil", match: (p) => p === "/studio" },
-  { id: "explorer", href: "/explorer", icon: LuCompass, label: "Explorer", desktopLabel: "Explorer", match: (p) => p.startsWith("/explorer") },
+  // { id: "explorer", href: "/explorer", icon: LuCompass, label: "Explorer", desktopLabel: "Explorer", match: (p) => p.startsWith("/explorer") },
   { id: "create", href: "/studio/create", icon: LuWandSparkles, label: "Créer", desktopLabel: "Créer (2 Notes)", isCenterAction: true, match: (p) => p.startsWith("/studio/create") || p.startsWith("/studio/creer") },
   { id: "library", href: "/studio/library", icon: LuLibrary, label: "Bibliothèque", desktopLabel: "Bibliothèque", match: (p) => p.startsWith("/studio/library") || p.startsWith("/studio/bibliotheque") },
   { id: "profile", href: "/studio/profil", icon: LuUser, label: "Profil", desktopLabel: "Profil", match: (p) => p.startsWith("/studio/profil") },

@@ -16,8 +16,13 @@ const { PrismaClient } = require("@prisma/client");
 const fs = require("fs");
 const path = require("path");
 
+// Détermination fiable de la racine du projet
+const projectRoot = fs.existsSync(path.join(process.cwd(), "package.json"))
+  ? process.cwd()
+  : path.resolve(__dirname, "..");
+
 // Chargement des variables d'environnement depuis .env si présentes
-const envPath = path.join(process.cwd(), ".env");
+const envPath = path.join(projectRoot, ".env");
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, "utf-8");
   envContent.split("\n").forEach((line) => {
@@ -117,7 +122,7 @@ function generateMelodyWavBuffer(durationSeconds = 8, baseFreq = 440) {
  * Sauvegarde le master audio dans le dossier public/uploads
  */
 function saveAudioToPublicDisk(buffer, userId, trackId) {
-  const publicDir = path.join(process.cwd(), "public");
+  const publicDir = path.join(projectRoot, "public");
   const uploadsDir = path.join(publicDir, "uploads", "tracks", String(userId), String(trackId));
 
   fs.mkdirSync(uploadsDir, { recursive: true });
