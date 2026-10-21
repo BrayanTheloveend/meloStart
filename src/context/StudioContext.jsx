@@ -20,7 +20,7 @@ const initialConfig = {
 
 export function StudioProvider({ children }) {
   const [notes, setNotes] = useState(6);
-  const [library, setLibrary] = useState(sampleTracks);
+  const [library, setLibrary] = useState([]);
   const [config, setConfig] = useState(initialConfig);
   const [isLoadingStudio, setIsLoadingStudio] = useState(true);
 
@@ -69,7 +69,7 @@ export function StudioProvider({ children }) {
           } catch (_) {}
         }
 
-        if (tracksRes?.data && tracksRes.data.length > 0) {
+        if (tracksRes?.data) {
           setLibrary(tracksRes.data);
           try {
             localStorage.setItem("melostars_library", JSON.stringify(tracksRes.data));

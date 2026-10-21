@@ -41,7 +41,7 @@ export async function POST(req) {
     }
 
     // Récupérer les crédits d'accueil configurés dans system_settings
-    let initialCredits = 10;
+    let initialCredits = 0;
     try {
       const setting = await prisma.systemSetting.findUnique({
         where: { key: "initial_signup_credits" },
