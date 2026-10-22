@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Avatar, Badge, Box, Button, Flex, Grid, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import {
   LuAudioLines,
@@ -55,6 +56,10 @@ const initialConfig = {
 
 export default function StudioShell({ initialTab = "home" }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "Créateur melostars";
+  const userImage = session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
+
   const [activeTab, setActiveTab] = useState(initialTab); // "home" | "create" | "library" | "profile" | "voices"
   const [notes, setNotes] = useState(6); // Solde initial de Notes (3 morceaux complets)
   const [config, setConfig] = useState(initialConfig);
@@ -259,9 +264,10 @@ export default function StudioShell({ initialTab = "home" }) {
   // En mode création : masquer la sidebar (web) et le bottom navigation (mobile) pour une concentration maximale
   if (activeTab === "create") {
     return (
-      <Box minH="100dvh" bg="paper.50" color="ink.900" position="relative" overflowX="hidden">
+      <Box minH="100dvh" bg="#09090d" color="#f4f4f7" position="relative" overflowX="hidden" py="4">
         <GeneratorPanel
           notes={notes}
+          onBack={() => setActiveTab("explore")}
           onOpenRecharge={() => router.push("/studio/recharge")}
           onDeductNotes={(cost) => updateNotes(notes - cost)}
           onTrackCreated={(createdTrack) => {
@@ -475,10 +481,11 @@ export default function StudioShell({ initialTab = "home" }) {
             >
               <Avatar.Root size="sm">
                 <Avatar.Image
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80"
-                  alt="Profil utilisateur"
+                  src={userImage}
+                  alt={userName}
+                  referrerPolicy="no-referrer"
                 />
-                <Avatar.Fallback name="Créateur melostars" />
+                <Avatar.Fallback name={userName} />
               </Avatar.Root>
             </Box>
 

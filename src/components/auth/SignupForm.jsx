@@ -46,6 +46,23 @@ export default function SignupForm() {
     setSuccess(true);
     const session = await getSession();
     const serverRole = session?.user?.role || "USER";
+
+    try {
+      if (session?.user) {
+        localStorage.setItem(
+          "melostars_user",
+          JSON.stringify({
+            email: session.user.email,
+            name: session.user.name,
+            image: session.user.image,
+            role: serverRole,
+            provider: "google",
+            loggedInAt: new Date().toISOString(),
+          })
+        );
+      }
+    } catch (_) {}
+
     const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const callback = searchParams?.get("callbackUrl");
     const destination = serverRole === "ADMIN" ? "/dashboard" : (callback || "/onboarding");

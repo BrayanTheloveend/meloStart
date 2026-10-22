@@ -51,6 +51,23 @@ export default function LoginForm() {
     setLoading(true);
     const session = await getSession().catch(() => null);
     const serverRole = session?.user?.role || "USER";
+
+    try {
+      if (session?.user) {
+        localStorage.setItem(
+          "melostars_user",
+          JSON.stringify({
+            email: session.user.email,
+            name: session.user.name,
+            image: session.user.image,
+            role: serverRole,
+            provider: "google",
+            loggedInAt: new Date().toISOString(),
+          })
+        );
+      }
+    } catch (_) {}
+
     const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const callbackParam = searchParams?.get("callbackUrl");
 

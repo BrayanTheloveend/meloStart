@@ -238,63 +238,78 @@ export async function getSunoMetrics() {
  * - Mode Custom (Style tags + Lyrics) : quand l'utilisateur fournit explicitement ses paroles.
  */
 export function buildHarmonizedMusicDirectives(params = {}) {
-  const {
-    prompt = "",
-    genre = "Pop",
-    style = "",
-    moods = ["Joyeux"],
-    vocalType = "female",
-    language = "Français",
-    lyrics = "",
-    customLyrics = "",
-    title: customTitle = "",
-    customMode,
-    instrumental,
-    model = "V6",
-    negativeTags = "",
-    vocalGender,
-  } = params;
+  // Extraction sécurisée des variables d'entrée (tolère strings, booleans, objets, null)
+  const rawPromptParam =
+    typeof params.prompt === "string"
+      ? params.prompt
+      : typeof params.description === "string"
+      ? params.description
+      : typeof params.story === "string"
+      ? params.story
+      : "";
 
-  const cleanPrompt = (prompt || "").trim();
-  const rawLyrics = (customLyrics || lyrics || "").trim();
-  const rawGenre = (style || genre || "Pop").trim();
-  const moodsList = Array.isArray(moods)
-    ? moods.filter(Boolean)
-    : typeof moods === "string" && moods
-    ? [moods]
-    : [];
+  const cleanPrompt = rawPromptParam.trim();
+
+  // Les paroles ne doivent être extraites que s'il s'agit d'une VRAIE chaîne de texte (pas un booléen `lyrics: true`)
+  const rawLyricsParam =
+    typeof params.customLyrics === "string" && params.customLyrics.trim()
+      ? params.customLyrics.trim()
+      : typeof params.lyrics === "string" && params.lyrics.trim()
+      ? params.lyrics.trim()
+      : "";
+
+  const rawGenreParam =
+    typeof params.style === "string" && params.style.trim()
+      ? params.style.trim()
+      : typeof params.genre === "string" && params.genre.trim()
+      ? params.genre.trim()
+      : "Pop";
+
+  const rawGenre = rawGenreParam;
+
+  const moodsList = Array.isArray(params.moods)
+    ? params.moods.map((m) => (typeof m === "string" ? m.trim() : m?.label || "")).filter(Boolean)
+    : typeof params.moods === "string" && params.moods.trim()
+    ? [params.moods.trim()]
+    : ["Joyeux"];
+
   const moodsStr = moodsList.join(", ");
 
-  const isInstrumental =
-    typeof instrumental === "boolean"
-      ? instrumental
-      : vocalType === "instrumental";
+  const vocalType = typeof params.vocalType === "string" ? params.vocalType.trim() : "female";
+  const language = typeof params.language === "string" && params.language.trim() ? params.language.trim() : "Français";
 
-  // Détermination intelligente du mode Suno
-  // Si l'utilisateur fournit de vraies paroles, on utilise Custom Mode.
-  // Sinon, le mode Standard avec prompt musical riche donne des résultats audio infiniment supérieurs.
+  const isInstrumental =
+    typeof params.instrumental === "boolean"
+      ? params.instrumental
+      : vocalType === "instrumental" || params.vocals === false || params.lyrics === false;
+
+  // Mode Custom Suno : activé uniquement si l'utilisateur a fourni de véritables paroles écrites
   const isCustomMode =
-    typeof customMode === "boolean"
-      ? customMode
-      : Boolean(rawLyrics);
+    typeof params.customMode === "boolean"
+      ? params.customMode
+      : Boolean(rawLyricsParam.length > 0);
 
   // Description vocale et tags
   let vocalDesc = "";
   let vocalTag = "";
-  const gender = vocalGender || (vocalType === "female" ? "f" : vocalType === "male" ? "m" : null);
+  const gender =
+    params.vocalGender || (vocalType === "female" ? "f" : vocalType === "male" ? "m" : null);
 
   if (isInstrumental) {
     vocalDesc = "morceau 100% instrumental sans chant ni paroles";
     vocalTag = "Instrumental";
   } else if (gender === "f" || vocalType === "female") {
-    vocalDesc = `chanté par une voix féminine douce et mélodieuse en ${language || "Français"}`;
-    vocalTag = `Female Vocal, ${language || "French"}`;
+    vocalDesc = `chanté par une voix féminine douce et mélodieuse en ${language}`;
+    vocalTag = `Female Vocal, ${language}`;
   } else if (gender === "m" || vocalType === "male") {
-    vocalDesc = `chanté par une voix masculine chaude et expressive en ${language || "Français"}`;
-    vocalTag = `Male Vocal, ${language || "French"}`;
+    vocalDesc = `chanté par une voix masculine chaude et expressive en ${language}`;
+    vocalTag = `Male Vocal, ${language}`;
+  } else if (vocalType === "duo") {
+    vocalDesc = `chanté en duo voix masculine et féminine harmonieuses en ${language}`;
+    vocalTag = `Duet, Male & Female Vocal, ${language}`;
   } else {
-    vocalDesc = `chanté en ${language || "Français"}`;
-    vocalTag = `${language || "French"}`;
+    vocalDesc = `chanté en ${language}`;
+    vocalTag = language;
   }
 
   // 1. Prompt musical harmonisé pour le mode Standard
@@ -315,8 +330,8 @@ export function buildHarmonizedMusicDirectives(params = {}) {
   styleTags.push("Studio Master, Crisp Production");
   const harmonizedStyle = styleTags.filter(Boolean).join(", ");
 
-  // 3. Titre dérivé
-  let title = (customTitle || "").trim();
+  // 3. Titre dérivé sécurisé
+  let title = typeof params.title === "string" ? params.title.trim() : "";
   if (!title) {
     const words = cleanPrompt ? cleanPrompt.split(/\s+/).slice(0, 4).join(" ") : `${rawGenre} Vibe`;
     title = (words.charAt(0).toUpperCase() + words.slice(1)).slice(0, 80);
@@ -326,18 +341,17 @@ export function buildHarmonizedMusicDirectives(params = {}) {
   const defaultNegative = isInstrumental
     ? "vocals, singing, speech, low quality, distorted, noisy, glitch, clipping"
     : "low quality, distorted, noisy, robotic, glitch, harsh frequencies, out of tune, mumble";
-  const finalNegativeTags = negativeTags
-    ? `${negativeTags}, ${defaultNegative}`
-    : defaultNegative;
+  const userNeg = typeof params.negativeTags === "string" && params.negativeTags.trim() ? params.negativeTags.trim() : "";
+  const finalNegativeTags = userNeg ? `${userNeg}, ${defaultNegative}` : defaultNegative;
 
   return {
     customMode: isCustomMode,
     instrumental: isInstrumental,
     prompt: harmonizedPrompt,
     style: harmonizedStyle,
-    lyrics: rawLyrics,
+    lyrics: rawLyricsParam,
     title,
-    model: model || "V6",
+    model: typeof params.model === "string" && params.model ? params.model : "V6",
     negativeTags: finalNegativeTags,
     genre: rawGenre,
     moods: moodsList,
@@ -351,86 +365,226 @@ export function buildHarmonizedMusicDirectives(params = {}) {
  * Lance la génération d'un morceau musical via Suno API (docs.sunoapi.org/suno-api/generate-music).
  * POST /api/v1/generate
  *
- * @param {Object} options Options de composition Suno optimisées
+ * @param {Object} options Options de composition selon la documentation officielle Suno
  * @param {string} [customApiKey] Clé API optionnelle
- * @returns {Promise<{ taskId: string }>} Identifiant de la tâche Suno
+ * @returns {Promise<{ taskId: string, model: string, customMode: boolean }>} Identifiant de la tâche Suno
  */
 export async function generateSunoMusic(options = {}, customApiKey = null) {
   const apiKey = customApiKey || (await getSunoApiKey());
   if (!apiKey) {
-    throw new Error("Clé Suno API manquante. Veuillez la configurer dans l'administration.");
+    throw new Error("Clé Suno API manquante. Veuillez la configurer dans les variables d'environnement (.env) ou dans l'administration.");
   }
 
   const {
-    prompt = "",
-    lyrics = "",
-    style = "",
-    title = "",
     customMode = false,
     instrumental = false,
     model = "V6",
-    callBackUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/webhooks/suno`,
+    // Paramètres Mode Non-Custom (Screenshot)
+    prompt = "",
+    style = "",
+    lyrics = "",
+    imageUrls = [],
+    videoUrls = [],
+    audioUrls = [],
+    // Paramètres Mode Custom
+    title = "",
     negativeTags = "",
     vocalGender = null,
+    duration = null,
+    styleWeight = null,
+    weirdnessConstraint = null,
+    audioWeight = null,
+    variety = null,
+    callBackUrl = null,
   } = options;
 
-  // Construction du payload propre selon la spécification officielle Suno
+  const isCustom = Boolean(customMode);
+  const isInstrumental = Boolean(instrumental);
+  const validModel = typeof model === "string" && model.trim() ? model.trim() : "V6";
+
+  // Construction du payload selon les règles de la documentation officielle Suno
   const payload = {
-    customMode: Boolean(customMode),
-    instrumental: Boolean(instrumental),
-    model: model || "V6",
-    callBackUrl,
+    customMode: isCustom,
+    instrumental: isInstrumental,
+    model: validModel,
   };
 
-  if (customMode) {
-    // Mode Personnalisé (Paroles fournies)
-    if (title) payload.title = title.slice(0, 80);
-    if (style) payload.style = style.slice(0, 1000);
-    if (lyrics) payload.lyrics = lyrics.slice(0, 5000);
-    if (negativeTags) payload.negativeTags = negativeTags.slice(0, 1000);
-    if (vocalGender && ["m", "f"].includes(vocalGender)) payload.vocalGender = vocalGender;
+  // Webhook callBackUrl (conforme aux spécifications Suno OpenAPI)
+  const targetCallback =
+    callBackUrl ||
+    process.env.SUNO_WEBHOOK_URL ||
+    (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/api/webhooks/suno` : null);
 
-    if (!payload.style && !payload.lyrics) {
-      payload.style = "Pop, Modern Studio Master";
+  if (
+    targetCallback &&
+    typeof targetCallback === "string" &&
+    targetCallback.startsWith("http")
+  ) {
+    // Si l'URL n'est pas un localhost inaccessible depuis l'extérieur, on l'envoie à Suno
+    if (!targetCallback.includes("localhost") && !targetCallback.includes("127.0.0.1")) {
+      payload.callBackUrl = targetCallback;
+    } else if (callBackUrl) {
+      // Si l'utilisateur a explicitement passé une callBackUrl personnalisée
+      payload.callBackUrl = callBackUrl;
     }
+  }
+
+  if (isCustom) {
+    // ========================================================
+    // 1. MODE PERSONNALISÉ (customMode: true)
+    // ========================================================
+    const cleanLyrics = typeof lyrics === "string" ? lyrics.trim() : "";
+    const cleanPrompt = typeof prompt === "string" ? prompt.trim() : "";
+
+    // Paroles : lyrics est prioritaire, prompt est utilisé en fallback
+    if (cleanLyrics) {
+      payload.lyrics = cleanLyrics.slice(0, 5000);
+      if (cleanPrompt) {
+        payload.prompt = cleanPrompt.slice(0, 3000);
+      }
+    } else if (cleanPrompt) {
+      payload.prompt = cleanPrompt.slice(0, 5000);
+    }
+
+    // Titre (max 80 chars - UNIQUEMENT en mode Custom)
+    if (title && typeof title === "string" && title.trim()) {
+      payload.title = title.trim().slice(0, 80);
+    }
+
+    // Style de musique (max 1000 chars)
+    if (style && typeof style === "string" && style.trim()) {
+      payload.style = style.trim().slice(0, 1000);
+    }
+
+    // Negative tags (max 1000 chars - UNIQUEMENT en mode Custom)
+    if (negativeTags && typeof negativeTags === "string" && negativeTags.trim()) {
+      payload.negativeTags = negativeTags.trim().slice(0, 1000);
+    }
+
+    // Préférence de genre de voix ('m' ou 'f' - UNIQUEMENT en mode Custom)
+    if (vocalGender && ["m", "f"].includes(vocalGender)) {
+      payload.vocalGender = vocalGender;
+    }
+
+    // Durée en secondes (10 à 360 - UNIQUEMENT en mode Custom)
+    if (typeof duration === "number" && duration >= 10 && duration <= 360) {
+      payload.duration = Math.round(duration);
+    }
+
+    // Poids et contraintes avancées
+    if (typeof styleWeight === "number" && styleWeight >= 0 && styleWeight <= 1) {
+      payload.styleWeight = Number(styleWeight.toFixed(2));
+    }
+    if (typeof weirdnessConstraint === "number" && weirdnessConstraint >= 0 && weirdnessConstraint <= 1) {
+      payload.weirdnessConstraint = Number(weirdnessConstraint.toFixed(2));
+    }
+    if (typeof audioWeight === "number" && audioWeight >= 0 && audioWeight <= 1) {
+      payload.audioWeight = Number(audioWeight.toFixed(2));
+    }
+    if (typeof variety === "number" && variety >= 0 && variety <= 4) {
+      payload.variety = Math.round(variety);
+    }
+
+    // Règle doc Suno : en Custom Mode, au moins l'un de style, lyrics, prompt ou negativeTags doit être fourni
+    if (!payload.style && !payload.lyrics && !payload.prompt && !payload.negativeTags) {
+      payload.style = "Pop, Modern Studio Melodic";
+    }
+
+    // Règle stricte doc Suno : NE JAMAIS ENVOYER imageUrls, videoUrls, audioUrls en customMode: true !
   } else {
-    // Mode Standard (Prompt textuel riche harmonisé - qualité audio maximale)
-    payload.prompt = (prompt || "A high-quality melodic track").slice(0, 3000);
+    // ========================================================
+    // 2. MODE NON-PERSONNALISÉ / SIMPLE (customMode: false)
+    // ========================================================
+    // Prompt = description de la chanson, idée centrale (max 3000 chars)
+    if (prompt && typeof prompt === "string" && prompt.trim()) {
+      payload.prompt = prompt.trim().slice(0, 3000);
+    }
+
+    // Style de musique (max 1000 chars)
+    if (style && typeof style === "string" && style.trim()) {
+      payload.style = style.trim().slice(0, 1000);
+    }
+
+    // Paroles d'accompagnement (max 5000 chars)
+    if (lyrics && typeof lyrics === "string" && lyrics.trim()) {
+      payload.lyrics = lyrics.trim().slice(0, 5000);
+    }
+
+    // Références médias (UNIQUEMENT en mode Non-Custom)
+    const isValidPublicMediaUrl = (u) =>
+      typeof u === "string" &&
+      (u.startsWith("http://") || u.startsWith("https://")) &&
+      !u.includes("localhost") &&
+      !u.includes("127.0.0.1");
+
+    if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+      const valid = imageUrls.filter(isValidPublicMediaUrl).slice(0, 5);
+      if (valid.length > 0) payload.imageUrls = valid;
+    }
+    if (Array.isArray(videoUrls) && videoUrls.length > 0) {
+      const valid = videoUrls.filter(isValidPublicMediaUrl).slice(0, 1);
+      if (valid.length > 0) payload.videoUrls = valid;
+    }
+    if (Array.isArray(audioUrls) && audioUrls.length > 0) {
+      const valid = audioUrls.filter(isValidPublicMediaUrl).slice(0, 10);
+      if (valid.length > 0) payload.audioUrls = valid;
+    }
+
+    // Règle doc Suno : en mode non-custom, au moins un élément doit être présent
+    if (!payload.prompt && !payload.style && !payload.lyrics && !payload.imageUrls?.length && !payload.videoUrls?.length && !payload.audioUrls?.length) {
+      payload.prompt = "A high-quality melodic track with modern production";
+    }
+
+    // Règle stricte doc Suno : NE JAMAIS ENVOYER title, negativeTags, vocalGender, duration, styleWeight en customMode: false !
   }
 
-  const endpoint = `${SUNO_API_BASE_URL}/generate`;
+  // Tentative avec endpoint principal puis endpoint backup
+  const endpointsToTry = [
+    `${SUNO_API_BASE_URL}/generate`,
+    `${SUNO_BACKUP_BASE_URL}/generate`,
+  ];
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(15000),
-  });
+  let lastError = null;
 
-  const resJson = await response.json().catch(() => null);
+  for (const endpoint of endpointsToTry) {
+    try {
+      console.log(`[Suno API] Envoi requête de génération vers ${endpoint}...`);
+      console.log(`[Suno API] Payload:`, JSON.stringify(payload));
 
-  if (!response.ok || resJson?.code !== 200) {
-    const errorMsg = resJson?.msg || `Erreur Suno API HTTP ${response.status}`;
-    const error = new Error(errorMsg);
-    error.statusCode = resJson?.code || response.status;
-    error.sunoCode = resJson?.code;
-    throw error;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(18000),
+      });
+
+      const resJson = await response.json().catch(() => null);
+
+      if (response.ok && resJson?.code === 200 && resJson?.data?.taskId) {
+        console.log(`[Suno API] ✅ Tâche créée avec succès ! TaskId: ${resJson.data.taskId}`);
+        return {
+          success: true,
+          taskId: resJson.data.taskId,
+          model: payload.model,
+          customMode: payload.customMode,
+        };
+      }
+
+      const errorMsg = resJson?.msg || `Erreur Suno API HTTP ${response.status}`;
+      console.warn(`[Suno API] Échec sur ${endpoint} (code ${resJson?.code || response.status}): ${errorMsg}`);
+      lastError = new Error(errorMsg);
+      lastError.statusCode = resJson?.code || response.status;
+      lastError.sunoCode = resJson?.code;
+    } catch (err) {
+      console.warn(`[Suno API] Exception réseau sur ${endpoint}:`, err.message);
+      lastError = err;
+    }
   }
 
-  const taskId = resJson?.data?.taskId;
-  if (!taskId) {
-    throw new Error("L'API Suno n'a retourné aucun taskId valide.");
-  }
-
-  return {
-    success: true,
-    taskId,
-    model: payload.model,
-    customMode: payload.customMode,
-  };
+  throw lastError || new Error("Impossible de joindre le service de génération Suno AI.");
 }
 
 /**
@@ -444,22 +598,36 @@ export async function getSunoTaskStatus(taskId, customApiKey = null) {
   const apiKey = customApiKey || (await getSunoApiKey());
   if (!apiKey) throw new Error("Clé Suno API manquante.");
 
-  const url = `${SUNO_API_BASE_URL}/generate/record-info?taskId=${encodeURIComponent(taskId)}`;
+  const cleanTaskId = taskId.replace(/^suno_/, "").trim();
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    signal: AbortSignal.timeout(8000),
-  });
+  const urlsToTry = [
+    `${SUNO_API_BASE_URL}/generate/record-info?taskId=${encodeURIComponent(cleanTaskId)}`,
+    `${SUNO_BACKUP_BASE_URL}/generate/record-info?taskId=${encodeURIComponent(cleanTaskId)}`,
+  ];
 
-  const json = await res.json().catch(() => null);
-  if (!res.ok || json?.code !== 200) {
-    throw new Error(json?.msg || `Erreur statut tâche Suno HTTP ${res.status}`);
+  let lastError = null;
+
+  for (const url of urlsToTry) {
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.code === 200 && json?.data) {
+        return json.data;
+      }
+      lastError = new Error(json?.msg || `Erreur statut tâche Suno HTTP ${res.status}`);
+    } catch (err) {
+      lastError = err;
+    }
   }
 
-  return json.data;
+  throw lastError || new Error("Impossible d'obtenir le statut de la tâche Suno.");
 }
 
 export default {

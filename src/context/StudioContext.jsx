@@ -11,8 +11,6 @@ const initialConfig = {
   customLyrics: "",
   genre: "Afrobeat",
   moods: ["Joyeux"],
-  tempo: 108,
-  duration: 60,
   lyrics: true,
   vocals: true,
   vocalType: "female",

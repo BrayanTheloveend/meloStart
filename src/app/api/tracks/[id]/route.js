@@ -4,12 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { refundCredits } from "@/lib/credits";
 import { deletePublicFile } from "@/lib/storage";
 import { getSunoTaskStatus } from "@/lib/sunoService";
-import { getTrackJobState } from "@/lib/queue";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/tracks/[id]
- * Endpoint de synchronisation et polling client avec BullMQ & Suno API.
- * Récupère l'avancement de la piste et synchronise l'état avec la file Redis ou Suno API.
+ * Endpoint de synchronisation et polling direct avec Suno API (sans Redis ni BullMQ).
+ * Récupère l'avancement de la piste et synchronise l'état avec Suno API.
  */
 export async function GET(req, { params }) {
   try {
@@ -29,81 +30,112 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Morceau introuvable." }, { status: 404 });
     }
 
-    // Polling asynchrone : si le morceau est en cours et lié à Suno API ou BullMQ
-    let jobInfo = null;
-    if (["QUEUED", "PROCESSING"].includes(track.status) && track.jobId) {
-      const isSunoJob = track.jobId.startsWith("suno_");
-      const sunoTaskId = track.jobId.replace(/^suno_/, "");
+    // Polling Suno en direct si la piste est en cours de traitement
+    if (["PENDING", "QUEUED", "PROCESSING"].includes(track.status) && track.jobId) {
+      const sunoTaskId = track.jobId.replace(/^suno_/, "").trim();
 
-      if (isSunoJob && sunoTaskId) {
+      if (sunoTaskId) {
         try {
           const sunoState = await getSunoTaskStatus(sunoTaskId);
-          jobInfo = { provider: "suno_async", status: sunoState.status, taskId: sunoTaskId };
 
-          if (sunoState.status === "SUCCESS") {
-            const audioData = sunoState.response?.data?.[0];
-            if (audioData) {
-              track = await prisma.track.update({
-                where: { id: track.id },
-                data: {
-                  status: "COMPLETED",
-                  progress: 100,
-                  audioUrl: audioData.audio_url || audioData.stream_audio_url || track.audioUrl,
-                  coverUrl: audioData.image_url || track.coverUrl,
-                  duration: audioData.duration ? Math.round(audioData.duration) : track.duration,
-                  title: audioData.title || track.title,
-                },
-                include: {
-                  user: { select: { id: true, name: true, image: true } },
-                },
-              });
-            }
-          } else if (sunoState.status === "FAILED") {
+          const isSuccess = sunoState?.status === "SUCCESS";
+          const isFailed = [
+            "FAILED",
+            "fail",
+            "CREATE_TASK_FAILED",
+            "GENERATE_AUDIO_FAILED",
+            "CALLBACK_EXCEPTION",
+          ].includes(sunoState?.status);
+
+          const audioItems =
+            sunoState?.response?.sunoData ||
+            sunoState?.response?.data ||
+            sunoState?.sunoData ||
+            sunoState?.data ||
+            [];
+          const primaryAudio = Array.isArray(audioItems) ? audioItems[0] : audioItems;
+
+          if (isSuccess && primaryAudio) {
+            const finalAudioUrl =
+              primaryAudio.audio_url || primaryAudio.stream_audio_url || track.audioUrl;
+            const finalCoverUrl =
+              primaryAudio.image_url || primaryAudio.image_large_url || track.coverUrl;
+            const finalDuration = primaryAudio.duration
+              ? Math.round(primaryAudio.duration)
+              : track.duration;
+            const finalTitle = primaryAudio.title || track.title;
+            const finalLyrics = primaryAudio.prompt || track.lyrics;
+
             track = await prisma.track.update({
               where: { id: track.id },
               data: {
-                status: "FAILED",
-                progress: 0,
-                errorMessage: sunoState.errorMessage || "Échec rapporté par les serveurs Suno API.",
+                status: "COMPLETED",
+                progress: 100,
+                audioUrl: finalAudioUrl,
+                coverUrl: finalCoverUrl,
+                duration: finalDuration,
+                title: finalTitle,
+                lyrics: finalLyrics,
+                errorMessage: null,
               },
               include: {
                 user: { select: { id: true, name: true, image: true } },
               },
             });
-            // Remboursement automatique des 2 Notes si échec
+          } else if (isFailed) {
+            const errorMsg =
+              sunoState?.errorMessage ||
+              sunoState?.msg ||
+              "Échec rapporté par les serveurs Suno AI.";
+
+            track = await prisma.track.update({
+              where: { id: track.id },
+              data: {
+                status: "FAILED",
+                progress: 0,
+                errorMessage: errorMsg,
+              },
+              include: {
+                user: { select: { id: true, name: true, image: true } },
+              },
+            });
+
+            // Remboursement automatique des 2 Notes
             await refundCredits(track.userId, 2, {
               trackId: track.id,
-              reason: "Échec rapporté par Suno API",
+              reason: errorMsg,
             }).catch(() => {});
+          } else if (sunoState?.status === "FIRST_SUCCESS" && primaryAudio) {
+            track = await prisma.track.update({
+              where: { id: track.id },
+              data: {
+                progress: 80,
+                audioUrl: primaryAudio.audio_url || primaryAudio.stream_audio_url || track.audioUrl,
+                coverUrl: primaryAudio.image_url || track.coverUrl,
+              },
+              include: {
+                user: { select: { id: true, name: true, image: true } },
+              },
+            });
+          } else if (sunoState?.status === "TEXT_SUCCESS") {
+            track = await prisma.track.update({
+              where: { id: track.id },
+              data: { progress: 45 },
+              include: {
+                user: { select: { id: true, name: true, image: true } },
+              },
+            });
           }
-        } catch (_) {
-          // Erreur réseau temporaire vers Suno, le polling client retentera au prochain cycle
-        }
-      } else {
-        // Consultation de l'état dans la file BullMQ
-        try {
-          const bullmqState = await getTrackJobState(track.jobId);
-          if (bullmqState) {
-            jobInfo = {
-              provider: "bullmq_queue",
-              status: bullmqState.state,
-              progress: bullmqState.progress || track.progress,
-              jobId: bullmqState.id,
-            };
-          } else {
-            jobInfo = { provider: "bullmq_local", status: track.status, progress: track.progress };
-          }
-        } catch (_) {
-          jobInfo = { provider: "bullmq_local", status: track.status, progress: track.progress };
+        } catch (pollErr) {
+          // Erreur réseau temporaire vers Suno, le client retentera au prochain cycle
+          console.warn(`[API Track Polling] Avertissement Suno task ${sunoTaskId}:`, pollErr.message);
         }
       }
     }
 
-
     return NextResponse.json({
       success: true,
       track,
-      job: jobInfo,
     });
   } catch (error) {
     console.error("[API Track GET ID] Erreur:", error);

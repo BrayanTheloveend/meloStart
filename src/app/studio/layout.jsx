@@ -78,6 +78,7 @@ function StudioLayoutContent({ children }) {
   const isCreationWorkflow = pathname.startsWith("/studio/create") || pathname.startsWith("/studio/creer");
   const isRechargeWorkflow = pathname === "/studio/recharge";
   const userName = session?.user?.name || "Créateur melostars";
+  const userImage = session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
 
   // Masquer la sidebar web et la navigation mobile sur le workflow de création pour une concentration totale
   if (isCreationWorkflow) {
@@ -216,8 +217,37 @@ function StudioLayoutContent({ children }) {
           </Stack>
         </Box>
 
-        {/* Pied de sidebar : Bouton de déconnexion fixe */}
-        <Box px="6" py="4" borderTopWidth="1px" borderColor="paper.200" flexShrink={0}>
+        {/* Pied de sidebar : Carte utilisateur & Déconnexion */}
+        <Box px="4" py="3" borderTopWidth="1px" borderColor="paper.200" flexShrink={0}>
+          <NextLink href="/studio/profil" title="Voir mon profil">
+            <HStack
+              gap="2.5"
+              px="2.5"
+              py="2"
+              mb="1"
+              rounded="xl"
+              _hover={{ bg: "paper.150" }}
+              transition="background 0.2s"
+            >
+              <Avatar.Root size="sm" rounded="full">
+                <Avatar.Fallback name={userName} />
+                <Avatar.Image
+                  src={userImage}
+                  alt={userName}
+                  referrerPolicy="no-referrer"
+                />
+              </Avatar.Root>
+              <Box minW="0" flex="1">
+                <Text fontSize="xs" fontWeight="700" color="ink.900" truncate lineHeight="1.2">
+                  {userName}
+                </Text>
+                <Text fontSize="10px" color="ink.400" truncate lineHeight="1.1">
+                  {session?.user?.email || "Créateur"}
+                </Text>
+              </Box>
+            </HStack>
+          </NextLink>
+
           <Button
             variant="ghost"
             size="sm"
@@ -230,11 +260,11 @@ function StudioLayoutContent({ children }) {
             fontSize="xs"
             fontWeight="600"
             justifyContent="flex-start"
-            px="3.5"
-            py="2.5"
+            px="2.5"
+            py="2"
           >
             <HStack gap="2.5">
-              <LuLogOut size={16} />
+              <LuLogOut size={15} />
               <Text>Déconnexion</Text>
             </HStack>
           </Button>
@@ -326,10 +356,11 @@ function StudioLayoutContent({ children }) {
               <NextLink href="/studio/profil" aria-label="Profil utilisateur">
                 <Avatar.Root size="sm">
                   <Avatar.Image
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80"
-                    alt="Profil utilisateur"
+                    src={userImage}
+                    alt={userName}
+                    referrerPolicy="no-referrer"
                   />
-                  <Avatar.Fallback name="Créateur melostars" />
+                  <Avatar.Fallback name={userName} />
                 </Avatar.Root>
               </NextLink>
             </Box>

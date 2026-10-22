@@ -36,6 +36,7 @@ import {
 
 import { onboardingGenres, onboardingGoals } from "@/data/onboardingData";
 import { accent } from "@/theme/system";
+import { GoogleIcon } from "@/components/auth/GoogleButton";
 
 export default function StudioProfile({
   notes = 6,
@@ -44,16 +45,18 @@ export default function StudioProfile({
   onUpdateNotes,
 }) {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
 
   // Données utilisateur
   const [profile, setProfile] = useState({
     name: "Créateur melostars",
     email: "creator@melostars.com",
     avatar: "🎵",
+    image: null,
     tier: "Plan Découverte",
     joinedDate: "Octobre 2026",
     role: "USER",
+    isGoogleLinked: false,
   });
 
   const [isEditingName, setIsEditingName] = useState(false);
@@ -68,16 +71,44 @@ export default function StudioProfile({
   // Synchronisation avec la session NextAuth
   useEffect(() => {
     if (session?.user) {
+      const isGoogle = Boolean(
+        session.user.image && session.user.image.includes("googleusercontent.com")
+      );
       setProfile((prev) => ({
         ...prev,
         name: session.user.name || prev.name,
         email: session.user.email || prev.email,
+        image: session.user.image || prev.image,
         role: session.user.role || prev.role,
         tier: session.user.role === "ADMIN" ? "Administrateur" : "Plan Découverte",
+        isGoogleLinked: isGoogle || prev.isGoogleLinked,
       }));
       setNameInput(session.user.name || profile.name);
     }
   }, [session]);
+
+  // Synchronisation avec l'API PostgreSQL
+  useEffect(() => {
+    let active = true;
+    fetch("/api/user/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active || !data?.user) return;
+        setProfile((prev) => ({
+          ...prev,
+          name: data.user.name || prev.name,
+          email: data.user.email || prev.email,
+          image: data.user.image || prev.image,
+          role: data.user.role || prev.role,
+          isGoogleLinked: data.user.isGoogleLinked || prev.isGoogleLinked,
+        }));
+        if (data.user.name) setNameInput(data.user.name);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Charger profil et préférences depuis localStorage
   useEffect(() => {
@@ -111,14 +142,27 @@ export default function StudioProfile({
     } catch (_) {}
   }, []);
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
     if (nameInput.trim()) {
-      setProfile((prev) => ({ ...prev, name: nameInput.trim() }));
+      const newName = nameInput.trim();
+      setProfile((prev) => ({ ...prev, name: newName }));
       try {
-        localStorage.setItem("melostars_username", nameInput.trim());
+        localStorage.setItem("melostars_username", newName);
       } catch (_) {}
       setIsEditingName(false);
       showToast("Nom d'artiste mis à jour !");
+
+      // Synchronisation base de données et session
+      try {
+        await fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName }),
+        });
+        if (updateSession) {
+          await updateSession({ name: newName });
+        }
+      } catch (_) {}
     }
   };
 
@@ -183,32 +227,48 @@ export default function StudioProfile({
         >
           {/* Avatar et informations principales */}
           <HStack gap={{ base: "3.5", md: "5" }} align="center">
-            {/* Avatar stylisé */}
+            {/* Avatar stylisé avec photo Google */}
             <Box
               position="relative"
               boxSize={{ base: "16", md: "20" }}
               rounded="2xl"
               bg="gradient(to-br, #7c3aed, #a855f7)"
+              boxShadow="0 10px 25px rgba(124, 58, 237, 0.35)"
+              borderWidth="3px"
+              borderColor="white"
+              flexShrink={0}
+              overflow="hidden"
               display="flex"
               alignItems="center"
               justifyContent="center"
-              fontSize={{ base: "2xl", md: "3xl" }}
-              color="white"
-              boxShadow="0 8px 20px rgba(124, 58, 237, 0.25)"
-              borderWidth="2px"
-              borderColor="white"
-              flexShrink={0}
             >
-              {profile.avatar}
+              {profile.image ? (
+                <Box
+                  as="img"
+                  src={profile.image}
+                  alt={profile.name}
+                  w="full"
+                  h="full"
+                  objectFit="cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <Text fontSize={{ base: "2xl", md: "3xl" }} color="white">
+                  {profile.avatar || "🎵"}
+                </Text>
+              )}
+
+              {/* Indicateur de compte actif */}
               <Box
                 position="absolute"
-                bottom="-2px"
-                right="-2px"
+                bottom="1"
+                right="1"
                 boxSize="4"
                 rounded="full"
                 bg="green.500"
                 borderWidth="2px"
                 borderColor="white"
+                boxShadow="0 2px 6px rgba(0,0,0,0.2)"
               />
             </Box>
 
@@ -270,7 +330,7 @@ export default function StudioProfile({
                 <Text>Membre depuis {profile.joinedDate}</Text>
               </HStack>
 
-              <HStack gap="2" mt="1">
+              <HStack gap="2" mt="1" wrap="wrap">
                 <Badge
                   px="2.5"
                   py="0.5"
@@ -296,6 +356,27 @@ export default function StudioProfile({
                   <LuShieldCheck size={11} style={{ display: "inline", marginRight: "3px" }} />
                   Compte Actif
                 </Badge>
+                {(profile.isGoogleLinked || Boolean(profile.image && profile.image.includes("googleusercontent.com"))) && (
+                  <Badge
+                    px="2.5"
+                    py="0.5"
+                    rounded="full"
+                    bg="blue.50"
+                    color="blue.700"
+                    borderWidth="1px"
+                    borderColor="blue.200"
+                    fontSize="2xs"
+                    fontFamily="ui"
+                    fontWeight="600"
+                  >
+                    <HStack gap="1" display="inline-flex" align="center">
+                      <Box as="span" display="inline-flex" transform="translateY(0.5px)">
+                        <GoogleIcon size={12} />
+                      </Box>
+                      <Text as="span">Compte Google</Text>
+                    </HStack>
+                  </Badge>
+                )}
               </HStack>
             </Stack>
           </HStack>

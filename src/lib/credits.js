@@ -91,8 +91,8 @@ export async function deductCredits(
         balanceAfter: updatedUser.credits,
         type: "GENERATION",
         description,
-        trackId,
-        metadata,
+        trackId: trackId || null,
+        metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : undefined,
       },
     });
 

@@ -1,11 +1,13 @@
 "use client";
 
 import NextLink from "next/link";
-import { Box, Button, Container, Flex, HStack, Text } from "@chakra-ui/react";
+import { useSession } from "next-auth/react";
+import { Avatar, Box, Button, Container, Flex, HStack, Text } from "@chakra-ui/react";
 import Logo from "@/components/common/Logo";
 import { accent } from "@/theme/system";
 
 export default function OnboardingHeader({ currentStep, totalSteps = 4, onSkip }) {
+  const { data: session } = useSession();
   const progressPercent = Math.round((currentStep / totalSteps) * 100);
 
   return (
@@ -34,7 +36,7 @@ export default function OnboardingHeader({ currentStep, totalSteps = 4, onSkip }
           </Flex> */}
 
           {/* Option de passer directement si l'utilisateur est pressé */}
-          <HStack gap="2">
+          <HStack gap="2.5">
             {currentStep < totalSteps ? (
               <Button
                 variant="ghost"
@@ -51,6 +53,17 @@ export default function OnboardingHeader({ currentStep, totalSteps = 4, onSkip }
               <Button asChild variant="ghost" size="sm" fontFamily="ui" fontSize="xs" color="ink.500">
                 <NextLink href="/studio">Aller au Studio</NextLink>
               </Button>
+            )}
+
+            {session?.user && (
+              <Avatar.Root size="xs" rounded="full">
+                <Avatar.Fallback name={session.user.name || "Créateur"} />
+                <Avatar.Image
+                  src={session.user.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
+                  alt={session.user.name || "Profil"}
+                  referrerPolicy="no-referrer"
+                />
+              </Avatar.Root>
             )}
           </HStack>
         </Flex>

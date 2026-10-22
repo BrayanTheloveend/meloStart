@@ -460,7 +460,11 @@ export default function AdminDashboardLayout({ children }) {
               >
                 <Avatar.Root size="sm" rounded="full">
                   <Avatar.Fallback name={adminName} />
-                  <Avatar.Image src={session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"} />
+                  <Avatar.Image
+                    src={session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop"}
+                    alt={adminName}
+                    referrerPolicy="no-referrer"
+                  />
                 </Avatar.Root>
                 <Box display={{ base: "none", md: "block" }} textAlign="left">
                   <Text fontSize="xs" fontWeight="700" lineHeight="1.2">

@@ -2,26 +2,33 @@ import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductCredits, refundCredits, DEFAULT_TRACK_COST } from "@/lib/credits";
-import { saveBufferToPublic, getPlayableAudioBuffer } from "@/lib/storage";
-import { generateSunoMusic, buildHarmonizedMusicDirectives } from "@/lib/sunoService";
-import { addTrackGenerationJob } from "@/lib/queue";
+import { generateSunoMusic } from "@/lib/sunoService";
+
+export const dynamic = "force-dynamic";
 
 /**
- * Endpoint de création de piste musicale avec File d'Attente BullMQ & Redis.
  * POST /api/tracks/generate
+ * Approche simple, directe et 100% conforme à la documentation officielle Suno API.
+ * https://docs.sunoapi.org/suno-api/generate-music
  *
- * Fonctionnement :
- * 1. Déduction atomique des 2 Notes (crédits).
- * 2. Création de l'enregistrement Track dans PostgreSQL (Prisma).
- * 3. Enqueueing du job dans la file BullMQ "music-generation" (Redis).
- * 4. Déclenchement de la génération Suno API ou du Worker audio BullMQ.
- * 5. Retour HTTP 201 immédiat avec identifiant de job BullMQ.
+ * Règles :
+ * 1. Authentification requise.
+ * 2. Vérification et déduction atomique des 2 Notes (DEFAULT_TRACK_COST).
+ * 3. Création de la piste dans la base PostgreSQL (Prisma).
+ * 4. Appel direct de l'API Suno avec les paramètres stricts du mode choisi :
+ *    - Mode Non-Personnalisé (customMode: false) : prompt, style, lyrics, imageUrls, videoUrls, audioUrls, instrumental, model.
+ *    - Mode Personnalisé (customMode: true) : title, lyrics, style, prompt, negativeTags, vocalGender, duration, instrumental, model.
+ * 5. Si Suno réussit : enregistrement de suno_${taskId} et retour 201.
+ * 6. Si Suno échoue : remboursement immédiat des 2 Notes et notification d'erreur réelle (aucune fausse musique).
  */
 export async function POST(req) {
-  try {
-    // 1. Authentification de l'utilisateur
-    const session = await getServerAuthSession();
+  let userId = null;
+  let track = null;
+  const cost = DEFAULT_TRACK_COST; // 2 Notes
 
+  try {
+    // 1. Authentification
+    const session = await getServerAuthSession();
     if (!session || !session.user?.id) {
       return NextResponse.json(
         { error: "Vous devez être connecté pour générer une musique." },
@@ -29,47 +36,65 @@ export async function POST(req) {
       );
     }
 
-    const userId = session.user.id;
+    userId = session.user.id;
 
-    // 2. Harmonisation intelligente de l'ensemble des paramètres musicaux
+    // 2. Récupération des données du formulaire
     const body = await req.json().catch(() => ({}));
-    const directives = buildHarmonizedMusicDirectives(body);
+    const {
+      customMode = false,
+      instrumental = false,
+      model = "V6",
+      // Mode Non-Personnalisé (Screenshot)
+      prompt = "",
+      style = "",
+      lyrics = "",
+      imageUrls = [],
+      videoUrls = [],
+      audioUrls = [],
+      // Mode Personnalisé
+      title = "",
+      negativeTags = "",
+      vocalGender = null,
+      duration = null,
+      callBackUrl = null,
+    } = body;
 
-    const { duration, callBackUrl } = body;
-    const cleanPrompt = directives.rawPrompt;
+    const isCustom = Boolean(customMode);
+    const isInstrumental = Boolean(instrumental);
 
-    if (!cleanPrompt && !directives.lyrics && !directives.genre) {
-      return NextResponse.json(
-        {
-          error:
-            "Veuillez renseigner au moins une description, un style musical ou des paroles.",
-        },
-        { status: 400 }
-      );
+    // Validation des entrées selon la documentation Suno
+    if (isCustom) {
+      if (!lyrics?.trim() && !prompt?.trim() && !style?.trim()) {
+        return NextResponse.json(
+          { error: "En mode personnalisé, veuillez renseigner les paroles, une description ou un style de musique." },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (!prompt?.trim() && !style?.trim() && !lyrics?.trim() && !imageUrls?.length && !videoUrls?.length && !audioUrls?.length) {
+        return NextResponse.json(
+          { error: "Veuillez renseigner une description de chanson ou un style musical." },
+          { status: 400 }
+        );
+      }
     }
 
-    const title = directives.title;
-    const model = directives.model;
-    const cost = DEFAULT_TRACK_COST; // 2 notes
-
-    // 3. Déduction atomique des crédits utilisateur
+    // 3. Déduction atomique des 2 Notes
     let transactionResult;
     try {
       transactionResult = await deductCredits(userId, cost, {
-        description: `Génération IA Suno (${model}) : "${title}"`,
+        description: `Génération IA Suno (${model}) : ${isCustom ? title || "Mode Personnalisé" : prompt.slice(0, 30) || style || "Mode Simple"}`,
         metadata: {
-          genre: directives.genre,
-          duration,
-          vocalType: directives.vocalType,
           model,
-          customMode: directives.customMode,
+          customMode: isCustom,
+          instrumental: isInstrumental,
         },
       });
     } catch (creditError) {
       if (creditError.code === "INSUFFICIENT_CREDITS") {
         return NextResponse.json(
           {
-            error: "Solde de Notes insuffisant pour générer ce titre.",
+            error: "Solde de Notes insuffisant. Chaque génération nécessite 2 Notes.",
             code: "INSUFFICIENT_CREDITS",
             currentCredits: creditError.currentCredits,
             requiredCredits: cost,
@@ -80,89 +105,80 @@ export async function POST(req) {
       throw creditError;
     }
 
-    // 4. Création de l'enregistrement Track dans Prisma
-    let track;
-    try {
-      track = await prisma.track.create({
-        data: {
-          userId,
-          title,
-          prompt: cleanPrompt || directives.prompt,
-          lyrics: directives.lyrics || null,
-          genre: directives.genre,
-          moods: directives.moods,
-          vocalType: directives.vocalType,
-          language: directives.language,
-          duration: Number(duration) || 60,
-          status: "PROCESSING",
-          progress: 15,
-        },
-      });
-    } catch (dbError) {
-      await refundCredits(userId, cost, {
-        reason: "Erreur technique lors de la création de la piste",
-      });
-      throw dbError;
+    // 4. Détermination du titre et informations de la piste
+    let derivedTitle = "";
+    if (isCustom && title?.trim()) {
+      derivedTitle = title.trim().slice(0, 80);
+    } else if (prompt?.trim()) {
+      const words = prompt.trim().split(/\s+/).slice(0, 5).join(" ");
+      derivedTitle = words.charAt(0).toUpperCase() + words.slice(1);
+    } else if (style?.trim()) {
+      derivedTitle = `${style.trim().split(",")[0]} Melostars`;
+    } else {
+      derivedTitle = "Nouvelle Création IA";
     }
 
-    // 5. Enregistrement dans la file d'attente BullMQ & Redis (Queue Producer)
-    let bullJob = null;
-    const defaultJobId = `track-${track.id}`;
-    try {
-      bullJob = await addTrackGenerationJob({
-        trackId: track.id,
+    const vocalTypeValue = isInstrumental
+      ? "instrumental"
+      : vocalGender === "m"
+      ? "male"
+      : vocalGender === "f"
+      ? "female"
+      : "female";
+
+    // 5. Création de la piste dans Prisma
+    track = await prisma.track.create({
+      data: {
         userId,
-        prompt: cleanPrompt || directives.prompt,
-        genre: directives.genre,
-        moods: directives.moods,
-        vocalType: directives.vocalType,
-        language: directives.language,
-        duration: Number(duration) || 60,
-        lyrics: directives.lyrics,
-        title,
-        model,
-        isCustom: directives.customMode,
-        isInstrumental: directives.instrumental,
-      });
-      if (bullJob) {
-        console.log(`[BullMQ] ✅ Job #${bullJob.id} inséré dans la file "music-generation" (Redis).`);
-      }
-    } catch (bullErr) {
-      console.warn("[BullMQ] Avertissement file Redis (mode hybride actif):", bullErr.message);
-    }
+        title: derivedTitle,
+        prompt: prompt?.trim() || style?.trim() || "Génération musicale IA",
+        lyrics: lyrics?.trim() || null,
+        genre: style?.trim() || "Pop",
+        moods: [],
+        vocalType: vocalTypeValue,
+        language: "Français",
+        duration: Number(duration) || 180,
+        status: "PROCESSING",
+        progress: 15,
+      },
+    });
 
-    // 6. Appel asynchrone Suno API si disponible
-    let sunoTask = null;
-    let sunoError = null;
-
-    const webhookUrl =
-      callBackUrl ||
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/webhooks/suno`;
-
+    // 6. Appel direct à l'API Suno selon la documentation officielle
+    let sunoResult;
     try {
-      console.log(`[API Generate] Appel Suno API (${model}) pour la piste ${track.id}...`);
-      console.log(`[API Generate] Mode: ${directives.customMode ? "Custom (Paroles)" : "Standard (Prompt riche)"}`);
+      console.log(`[API Generate] Lancement Suno (${model}) - Mode ${isCustom ? "Custom" : "Standard"}`);
 
-      sunoTask = await generateSunoMusic({
-        prompt: directives.prompt,
-        lyrics: directives.lyrics,
-        style: directives.style,
-        title,
-        customMode: directives.customMode,
-        instrumental: directives.instrumental,
+      sunoResult = await generateSunoMusic({
+        customMode: isCustom,
+        instrumental: isInstrumental,
         model,
-        callBackUrl: webhookUrl,
-        negativeTags: directives.negativeTags,
-        vocalGender: directives.vocalType === "male" ? "m" : directives.vocalType === "female" ? "f" : null,
+        // Paramètres standard
+        prompt: prompt?.trim(),
+        style: style?.trim(),
+        lyrics: lyrics?.trim(),
+        imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
+        videoUrls: Array.isArray(videoUrls) ? videoUrls : [],
+        audioUrls: Array.isArray(audioUrls) ? audioUrls : [],
+        // Paramètres personnalisés
+        title: derivedTitle,
+        negativeTags: negativeTags?.trim(),
+        vocalGender: vocalGender === "m" || vocalGender === "f" ? vocalGender : null,
+        duration: typeof duration === "number" ? duration : undefined,
+        callBackUrl:
+          callBackUrl ||
+          process.env.SUNO_WEBHOOK_URL ||
+          (process.env.NEXT_PUBLIC_APP_URL
+            ? `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/api/webhooks/suno`
+            : null),
       });
 
-      console.log(`[API Generate] ✅ Tâche Suno démarrée. Task ID : ${sunoTask.taskId}`);
+      console.log(`[API Generate] ✅ Tâche Suno créée ! Task ID: ${sunoResult.taskId}`);
 
-      // Enregistrer le taskId de Suno dans Prisma
-      await prisma.track.update({
+      // Enregistrement du taskId Suno dans la base de données
+      const updatedTrack = await prisma.track.update({
         where: { id: track.id },
         data: {
-          jobId: `suno_${sunoTask.taskId}`,
+          jobId: `suno_${sunoResult.taskId}`,
           status: "PROCESSING",
           progress: 20,
         },
@@ -171,126 +187,73 @@ export async function POST(req) {
       return NextResponse.json(
         {
           success: true,
-          message: `Génération Suno (${model}) orchestrée via BullMQ & Webhooks.`,
-          mode: "bullmq_redis",
-          provider: "suno",
-          taskId: sunoTask.taskId,
-          bullmqJobId: bullJob?.id || defaultJobId,
+          taskId: sunoResult.taskId,
           track: {
-            id: track.id,
-            title: track.title,
+            id: updatedTrack.id,
+            title: updatedTrack.title,
             status: "PROCESSING",
             progress: 20,
             remainingCredits: transactionResult.newBalance,
-            model,
+            model: sunoResult.model,
           },
         },
         { status: 201 }
       );
-    } catch (err) {
-      sunoError = err;
-      console.warn(
-        `[API Generate] Suno API non disponible (${err.message}) - Prise en charge par le Worker BullMQ & Moteur Studio...`
-      );
-    }
+    } catch (sunoError) {
+      console.error(`[API Generate] ❌ Erreur Suno API :`, sunoError.message);
 
-    // 7. Traitement par la file BullMQ & Relais Asynchrone Local
-    const activeJobId = bullJob?.id || defaultJobId;
+      // Remboursement immédiat des crédits
+      await refundCredits(userId, cost, {
+        trackId: track?.id,
+        reason: `Échec Suno API: ${sunoError.message}`,
+      }).catch((refundErr) => {
+        console.error("[API Generate] Erreur lors du remboursement:", refundErr);
+      });
 
-    await prisma.track.update({
-      where: { id: track.id },
-      data: {
-        jobId: activeJobId,
-        status: "PROCESSING",
-        progress: 25,
-      },
-    });
-
-    // Exécution résiliente dans l'Event Loop (garantit la finalisation même si le worker externe est en veille)
-    setTimeout(async () => {
-      try {
-        console.log(`[BullMQ Pipeline] Début rendu audio pour le job #${activeJobId} (${track.id})...`);
-
-        // Étape 1 : 50% (Accords et arrangements)
-        await new Promise((r) => setTimeout(r, 1500));
-        await prisma.track.update({
-          where: { id: track.id },
-          data: { status: "PROCESSING", progress: 50 },
-        });
-
-        // Étape 2 : 80% (Synthèse vocale et mastering)
-        await new Promise((r) => setTimeout(r, 2000));
-        await prisma.track.update({
-          where: { id: track.id },
-          data: { status: "PROCESSING", progress: 85 },
-        });
-
-        // Étape 3 : Finalisation audio
-        await new Promise((r) => setTimeout(r, 1500));
-        const audioData = await getPlayableAudioBuffer();
-        const fileKey = `tracks/${userId}/${track.id}/master.${audioData.extension || "mp3"}`;
-
-        const uploadResult = await saveBufferToPublic({
-          buffer: audioData.buffer,
-          key: fileKey,
-          contentType: audioData.contentType || "audio/mpeg",
-          metadata: { userId, trackId: track.id, genre: directives.genre || "Pop" },
-        });
-
-        await prisma.track.update({
-          where: { id: track.id },
-          data: {
-            status: "COMPLETED",
-            progress: 100,
-            duration: Number(duration) || 60,
-            audioUrl: uploadResult.url,
-            s3AudioKey: uploadResult.key,
-            coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
-          },
-        });
-
-        console.log(`[BullMQ Pipeline] ✅ Morceau ${track.id} finalisé avec succès (${uploadResult.url}).`);
-      } catch (asyncErr) {
-        console.error("[BullMQ Pipeline] Erreur traitement:", asyncErr);
+      // Mise à jour de la piste comme échouée
+      if (track?.id) {
         await prisma.track.update({
           where: { id: track.id },
           data: {
             status: "FAILED",
-            errorMessage: asyncErr.message || "Erreur lors du traitement BullMQ.",
+            progress: 0,
+            errorMessage: sunoError.message || "Erreur lors de la génération Suno API",
           },
-        });
-        await refundCredits(userId, cost, {
-          trackId: track.id,
-          reason: "Échec du rendu musical",
-        });
+        }).catch(() => {});
       }
-    }, 500);
+
+      return NextResponse.json(
+        {
+          error: sunoError.message || "Impossible de démarrer la génération musicale Suno. Vos 2 Notes ont été remboursées.",
+          refunded: true,
+          code: "SUNO_API_ERROR",
+        },
+        { status: 400 }
+      );
+    }
+  } catch (error) {
+    console.error("[API Generate] Erreur serveur critique:", error);
+
+    // En cas d'exception inattendue, rembourser si nécessaire
+    if (userId && track?.id) {
+      await refundCredits(userId, cost, {
+        trackId: track.id,
+        reason: "Erreur serveur inattendue",
+      }).catch(() => {});
+
+      await prisma.track.update({
+        where: { id: track.id },
+        data: {
+          status: "FAILED",
+          errorMessage: error.message,
+        },
+      }).catch(() => {});
+    }
 
     return NextResponse.json(
       {
-        success: true,
-        message:
-          sunoError?.statusCode === 429
-            ? "Solde Suno API épuisé. Génération prise en charge par BullMQ et le moteur local."
-            : "Génération lancée via la file d'attente BullMQ & Redis.",
-        mode: "bullmq_redis",
-        provider: "bullmq_queue",
-        jobId: activeJobId,
-        bullmqJobId: bullJob?.id || activeJobId,
-        track: {
-          id: track.id,
-          title: track.title,
-          status: "PROCESSING",
-          progress: 25,
-          remainingCredits: transactionResult.newBalance,
-        },
+        error: error.message || "Une erreur inattendue est survenue lors de la création du morceau.",
       },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("[API Generate] Erreur non gérée:", error);
-    return NextResponse.json(
-      { error: "Une erreur inattendue est survenue lors de la création du titre." },
       { status: 500 }
     );
   }

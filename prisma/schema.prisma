@@ -128,7 +128,7 @@ model Track {
   moods        String[]    @default([])
   vocalType    String?     @map("vocal_type") // "male" | "female" | "instrumental"
   language     String?     @default("Français")
-  duration     Int         @default(60) // en secondes
+  duration     Int         @default(194) // en secondes
 
   // Fichiers multimédias S3 / R2
   audioUrl     String?     @map("audio_url")
