@@ -87,13 +87,13 @@ const NAV_GROUPS = [
         badge: null,
         badgeColor: "purple.600",
       },
-      {
-        href: "/dashboard/system",
-        icon: LuServer,
-        label: "Santé BullMQ & Redis",
-        badge: "BullMQ",
-        badgeColor: "green.500",
-      },
+      // {
+      //   href: "/dashboard/system",
+      //   icon: LuServer,
+      //   label: "Santé BullMQ & Redis",
+      //   badge: "BullMQ",
+      //   badgeColor: "green.500",
+      // },
       {
         href: "/dashboard/settings",
         icon: LuSettings,

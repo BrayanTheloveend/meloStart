@@ -664,18 +664,6 @@ export default function StudioProfile({
                     Toutes les créations ({totalSongs})
                   </Badge>
 
-                  <Button
-                    size="2xs"
-                    rounded="full"
-                    variant="outline"
-                    borderColor="paper.300"
-                    color="ink.600"
-                    onClick={handleResetCredits}
-                    fontFamily="ui"
-                    fontSize="2xs"
-                  >
-                    🎁 +10 Notes Démo
-                  </Button>
                 </Flex>
 
                 {library.length === 0 ? (
@@ -709,7 +697,7 @@ export default function StudioProfile({
                     </Button>
                   </Box>
                 ) : (
-                  <Stack gap="2">
+                  <Stack>
                     {library.map((track) => {
                       const { day, month } = parseTrackDate(track.createdAt);
                       const isCurrent = activeTrack?.id === track.id;
@@ -720,30 +708,28 @@ export default function StudioProfile({
                           key={track.id}
                           p="2.5"
                           px={{ base: "3", sm: "4" }}
-                          rounded="2xl"
-                          bg={isCurrent ? "brand.violetTint" : "paper.50"}
-                          borderWidth="1px"
+                          bg={isCurrent && "brand.violetTint" }
+                          borderBottomWidth="1px"
                           borderColor={isCurrent ? "brand.violetDeep" : "paper.200"}
                           _hover={{ borderColor: isCurrent ? "brand.violetDeep" : "paper.400", bg: isCurrent ? "brand.violetTint" : "paper.0" }}
                           transition="all 0.2s"
                         >
                           <Flex align="center" justify="space-between" gap="3">
                             {/* Bloc Date (style 29 Sep du mockup) */}
-                            <Flex direction="column" align="center" justify="center" minW="40px" textAlign="center" flexShrink={0}>
+                            {/* <Flex direction="column" align="center" justify="center" minW="40px" textAlign="center" flexShrink={0}>
                               <Text fontFamily="heading" fontWeight="800" fontSize="md" color="ink.900" lineHeight="1">
                                 {day}
                               </Text>
                               <Text fontFamily="ui" fontWeight="700" fontSize="2xs" color="ink.400" textTransform="uppercase" letterSpacing="wider" mt="0.5">
                                 {month}
                               </Text>
-                            </Flex>
+                            </Flex> */}
 
                             {/* Vignette couverture */}
                             <Image
                               src={track.coverUrl || "/assets/13.png"}
                               alt={track.title}
                               boxSize="10"
-                              rounded="xl"
                               objectFit="cover"
                               flexShrink={0}
                             />
@@ -781,6 +767,7 @@ export default function StudioProfile({
                                 <Badge
                                   rounded="full"
                                   px="2.5"
+                                  display={'none'}
                                   py="0.5"
                                   bg="green.50"
                                   color="green.700"
@@ -796,7 +783,7 @@ export default function StudioProfile({
                             </Box>
 
                             {/* Durée ou coût */}
-                            <Text fontSize="xs" fontWeight="700" color="ink.700" display={{ base: "none", md: "block" }}>
+                            <Text display={'none'} fontSize="xs" fontWeight="700" color="ink.700" >
                               {track.length || "1:00"}
                             </Text>
 
