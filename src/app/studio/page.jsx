@@ -15,6 +15,9 @@ export default function StudioHomePage() {
     library,
     activePlayerTrack,
     isPlaying,
+    currentTime,
+    duration,
+    seekTrack,
     playTrack,
     toggleFavorite,
     setConfig,
@@ -72,6 +75,9 @@ export default function StudioHomePage() {
         onOpenRecharge={() => router.push("/studio/recharge")}
         activeTrack={activePlayerTrack}
         isPlaying={isPlaying}
+        currentTime={currentTime}
+        duration={duration}
+        onSeekTrack={seekTrack}
         onPlayTrack={playTrack}
         onToggleFavorite={toggleFavorite}
         onPreloadPrompt={handlePreloadPrompt}

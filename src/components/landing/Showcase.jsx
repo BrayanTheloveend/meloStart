@@ -287,9 +287,9 @@ export default function Showcase() {
                         flexShrink={0}
                         bg="paper.200"
                       >
-                        {t.cover ? (
+                        {(t.coverUrl || t.cover) ? (
                           <Image
-                            src={t.cover}
+                            src={t.coverUrl || t.cover}
                             alt={t.title}
                             boxSize="100%"
                             objectFit="cover"

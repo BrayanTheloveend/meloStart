@@ -229,137 +229,7 @@ export async function getSunoMetrics() {
   };
 }
 
-/**
- * Harmonise les paramètres disparates (prompt, genre, style, moods, vocalType, language, lyrics, etc.)
- * en une directive musicale puissante et cohérente pour obtenir un rendu audio de très haute fidélité.
- *
- * Élimine les contradictions, enrichit la description et sélectionne le mode Suno optimal :
- * - Mode Standard (Prompt riche) : quand aucune parole n'est fournie (le modèle compose lui-même les paroles, rimes et mélodies).
- * - Mode Custom (Style tags + Lyrics) : quand l'utilisateur fournit explicitement ses paroles.
- */
-export function buildHarmonizedMusicDirectives(params = {}) {
-  // Extraction sécurisée des variables d'entrée (tolère strings, booleans, objets, null)
-  const rawPromptParam =
-    typeof params.prompt === "string"
-      ? params.prompt
-      : typeof params.description === "string"
-      ? params.description
-      : typeof params.story === "string"
-      ? params.story
-      : "";
 
-  const cleanPrompt = rawPromptParam.trim();
-
-  // Les paroles ne doivent être extraites que s'il s'agit d'une VRAIE chaîne de texte (pas un booléen `lyrics: true`)
-  const rawLyricsParam =
-    typeof params.customLyrics === "string" && params.customLyrics.trim()
-      ? params.customLyrics.trim()
-      : typeof params.lyrics === "string" && params.lyrics.trim()
-      ? params.lyrics.trim()
-      : "";
-
-  const rawGenreParam =
-    typeof params.style === "string" && params.style.trim()
-      ? params.style.trim()
-      : typeof params.genre === "string" && params.genre.trim()
-      ? params.genre.trim()
-      : "Pop";
-
-  const rawGenre = rawGenreParam;
-
-  const moodsList = Array.isArray(params.moods)
-    ? params.moods.map((m) => (typeof m === "string" ? m.trim() : m?.label || "")).filter(Boolean)
-    : typeof params.moods === "string" && params.moods.trim()
-    ? [params.moods.trim()]
-    : ["Joyeux"];
-
-  const moodsStr = moodsList.join(", ");
-
-  const vocalType = typeof params.vocalType === "string" ? params.vocalType.trim() : "female";
-  const language = typeof params.language === "string" && params.language.trim() ? params.language.trim() : "Français";
-
-  const isInstrumental =
-    typeof params.instrumental === "boolean"
-      ? params.instrumental
-      : vocalType === "instrumental" || params.vocals === false || params.lyrics === false;
-
-  // Mode Custom Suno : activé uniquement si l'utilisateur a fourni de véritables paroles écrites
-  const isCustomMode =
-    typeof params.customMode === "boolean"
-      ? params.customMode
-      : Boolean(rawLyricsParam.length > 0);
-
-  // Description vocale et tags
-  let vocalDesc = "";
-  let vocalTag = "";
-  const gender =
-    params.vocalGender || (vocalType === "female" ? "f" : vocalType === "male" ? "m" : null);
-
-  if (isInstrumental) {
-    vocalDesc = "morceau 100% instrumental sans chant ni paroles";
-    vocalTag = "Instrumental";
-  } else if (gender === "f" || vocalType === "female") {
-    vocalDesc = `chanté par une voix féminine douce et mélodieuse en ${language}`;
-    vocalTag = `Female Vocal, ${language}`;
-  } else if (gender === "m" || vocalType === "male") {
-    vocalDesc = `chanté par une voix masculine chaude et expressive en ${language}`;
-    vocalTag = `Male Vocal, ${language}`;
-  } else if (vocalType === "duo") {
-    vocalDesc = `chanté en duo voix masculine et féminine harmonieuses en ${language}`;
-    vocalTag = `Duet, Male & Female Vocal, ${language}`;
-  } else {
-    vocalDesc = `chanté en ${language}`;
-    vocalTag = language;
-  }
-
-  // 1. Prompt musical harmonisé pour le mode Standard
-  const promptElements = [];
-  promptElements.push(`Morceau de ${rawGenre}`);
-  if (moodsStr) promptElements.push(`ambiance ${moodsStr.toLowerCase()}`);
-  if (vocalDesc) promptElements.push(vocalDesc);
-  promptElements.push("production studio moderne, mixage dynamique, mélodie entraînante et refrain accrocheur");
-  if (cleanPrompt) {
-    promptElements.push(`Thème : ${cleanPrompt}`);
-  }
-  const harmonizedPrompt = promptElements.join(", ");
-
-  // 2. Tags de style pour le mode Custom
-  const styleTags = [rawGenre];
-  if (moodsStr) styleTags.push(moodsStr);
-  if (vocalTag) styleTags.push(vocalTag);
-  styleTags.push("Studio Master, Crisp Production");
-  const harmonizedStyle = styleTags.filter(Boolean).join(", ");
-
-  // 3. Titre dérivé sécurisé
-  let title = typeof params.title === "string" ? params.title.trim() : "";
-  if (!title) {
-    const words = cleanPrompt ? cleanPrompt.split(/\s+/).slice(0, 4).join(" ") : `${rawGenre} Vibe`;
-    title = (words.charAt(0).toUpperCase() + words.slice(1)).slice(0, 80);
-  }
-
-  // 4. Negative tags protecteurs contre les artefacts audio
-  const defaultNegative = isInstrumental
-    ? "vocals, singing, speech, low quality, distorted, noisy, glitch, clipping"
-    : "low quality, distorted, noisy, robotic, glitch, harsh frequencies, out of tune, mumble";
-  const userNeg = typeof params.negativeTags === "string" && params.negativeTags.trim() ? params.negativeTags.trim() : "";
-  const finalNegativeTags = userNeg ? `${userNeg}, ${defaultNegative}` : defaultNegative;
-
-  return {
-    customMode: isCustomMode,
-    instrumental: isInstrumental,
-    prompt: harmonizedPrompt,
-    style: harmonizedStyle,
-    lyrics: rawLyricsParam,
-    title,
-    model: typeof params.model === "string" && params.model ? params.model : "V6",
-    negativeTags: finalNegativeTags,
-    genre: rawGenre,
-    moods: moodsList,
-    vocalType,
-    language,
-    rawPrompt: cleanPrompt,
-  };
-}
 
 /**
  * Lance la génération d'un morceau musical via Suno API (docs.sunoapi.org/suno-api/generate-music).
@@ -439,11 +309,10 @@ export async function generateSunoMusic(options = {}, customApiKey = null) {
     // Paroles : lyrics est prioritaire, prompt est utilisé en fallback
     if (cleanLyrics) {
       payload.lyrics = cleanLyrics.slice(0, 5000);
-      if (cleanPrompt) {
-        payload.prompt = cleanPrompt.slice(0, 3000);
-      }
+      payload.prompt = cleanLyrics.slice(0, 5000);
     } else if (cleanPrompt) {
       payload.prompt = cleanPrompt.slice(0, 5000);
+      payload.lyrics = cleanPrompt.slice(0, 5000);
     }
 
     // Titre (max 80 chars - UNIQUEMENT en mode Custom)
@@ -639,7 +508,6 @@ export default {
   getSunoCredits,
   getSunoMetrics,
   generateSunoMusic,
-  buildHarmonizedMusicDirectives,
   getSunoTaskStatus,
 };
 

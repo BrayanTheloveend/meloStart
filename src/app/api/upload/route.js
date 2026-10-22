@@ -4,7 +4,7 @@ import { saveBufferToPublic } from "@/lib/storage";
 import crypto from "crypto";
 import path from "path";
 
-export const dynamic = "force-dynamic";
+
 
 /**
  * POST /api/upload

@@ -5,7 +5,6 @@ import { refundCredits } from "@/lib/credits";
 import { deletePublicFile } from "@/lib/storage";
 import { getSunoTaskStatus } from "@/lib/sunoService";
 
-export const dynamic = "force-dynamic";
 
 /**
  * GET /api/tracks/[id]

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, Flex, HStack, IconButton, Slider, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, IconButton, Image, Slider, Stack, Text } from "@chakra-ui/react";
 import { LuDownload, LuHeart, LuPause, LuPlay, LuVolume2, LuX } from "react-icons/lu";
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
@@ -9,7 +9,15 @@ import { downloadTrackAudio } from "@/lib/downloadTrack";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export default function StudioPlayerBar({ track, isPlaying, onTogglePlay, onClose, onToggleFavorite }) {
+export default function StudioPlayerBar({
+  track,
+  isPlaying,
+  onTogglePlay,
+  onClose,
+  onToggleFavorite,
+  onProgress,
+  seekRequest,
+}) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(track?.seconds ?? 60);
   const audioRef = useRef(null);
@@ -17,8 +25,21 @@ export default function StudioPlayerBar({ track, isPlaying, onTogglePlay, onClos
   // Synchronisation de la durée et réinitialisation au changement de piste
   useEffect(() => {
     setCurrentTime(0);
-    setDuration(track?.seconds ?? (track?.duration || 60));
-  }, [track?.id, track?.seconds, track?.duration]);
+    const initialDur = Number(track?.seconds ?? (track?.duration || 60));
+    setDuration(initialDur);
+    onProgress?.(0, initialDur);
+  }, [track?.id, track?.seconds, track?.duration, onProgress]);
+
+  // Prise en charge des requêtes de seek depuis l'extérieur (ex: clic sur Waveform)
+  useEffect(() => {
+    if (seekRequest !== null && typeof seekRequest === "number" && !isNaN(seekRequest)) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = seekRequest;
+      }
+      setCurrentTime(seekRequest);
+      onProgress?.(seekRequest, duration);
+    }
+  }, [seekRequest, duration, onProgress]);
 
   // Gestion de la lecture réelle via élément HTML5 Audio
   useEffect(() => {
@@ -42,13 +63,16 @@ export default function StudioPlayerBar({ track, isPlaying, onTogglePlay, onClos
       setCurrentTime((t) => {
         if (t >= duration) {
           onTogglePlay(false);
+          onProgress?.(0, duration);
           return 0;
         }
-        return t + 0.25;
+        const next = t + 0.25;
+        onProgress?.(next, duration);
+        return next;
       });
     }, 250);
     return () => clearInterval(interval);
-  }, [isPlaying, duration, onTogglePlay, track?.audioUrl]);
+  }, [isPlaying, duration, onTogglePlay, track?.audioUrl, onProgress]);
 
   const handleDownload = () => {
     if (!track) return;
@@ -77,15 +101,22 @@ export default function StudioPlayerBar({ track, isPlaying, onTogglePlay, onClos
         <audio
           ref={audioRef}
           src={track.audioUrl}
-          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+          onTimeUpdate={(e) => {
+            const cur = e.currentTarget.currentTime;
+            setCurrentTime(cur);
+            onProgress?.(cur, e.currentTarget.duration || duration);
+          }}
           onLoadedMetadata={(e) => {
-            if (e.currentTarget.duration && !isNaN(e.currentTarget.duration)) {
-              setDuration(e.currentTarget.duration);
+            const dur = e.currentTarget.duration;
+            if (dur && !isNaN(dur) && dur > 0) {
+              setDuration(dur);
+              onProgress?.(currentTime, dur);
             }
           }}
           onEnded={() => {
             onTogglePlay(false);
             setCurrentTime(0);
+            onProgress?.(0, duration);
           }}
           onError={() => {
             console.warn("[StudioPlayerBar] Erreur lecture fichier audio.");
@@ -96,19 +127,30 @@ export default function StudioPlayerBar({ track, isPlaying, onTogglePlay, onClos
       <Flex align="center" justify="space-between" gap="4">
         {/* Infos morceau */}
         <HStack gap="3" minW="0" maxW={{ base: "200px", sm: "300px" }}>
-          <Box
-            boxSize="10"
-            rounded="xl"
-            background={track.coverGradient || "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)"}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            color="white"
-            fontSize="sm"
-            flexShrink={0}
-          >
-            🎵
-          </Box>
+          {track.coverUrl ? (
+            <Image
+              src={track.coverUrl}
+              alt={track.title}
+              boxSize="10"
+              rounded="xl"
+              objectFit="cover"
+              flexShrink={0}
+            />
+          ) : (
+            <Box
+              boxSize="10"
+              rounded="xl"
+              background={track.coverGradient || "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)"}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              color="white"
+              fontSize="sm"
+              flexShrink={0}
+            >
+              🎵
+            </Box>
+          )}
           <Stack gap="0" minW="0">
             <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="ink.900" truncate>
               {track.title}

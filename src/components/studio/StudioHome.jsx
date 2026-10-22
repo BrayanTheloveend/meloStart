@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Box, Button, Flex, Grid, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Grid, HStack, IconButton, Image, Stack, Text } from "@chakra-ui/react";
 import { LuClock, LuDownload, LuHeart, LuMusic, LuPause, LuPlay, LuPlus, LuSparkles, LuWandSparkles, LuZap } from "react-icons/lu";
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
@@ -20,6 +20,9 @@ export default function StudioHome({
   onOpenRecharge,
   activeTrack,
   isPlaying,
+  currentTime = 0,
+  duration = 0,
+  onSeekTrack,
   onPlayTrack,
   onToggleFavorite,
   onPreloadPrompt,
@@ -71,63 +74,70 @@ export default function StudioHome({
         </HStack>
       </Flex>
 
-      {/* 2. Carte Héros d'action principale : Créer une nouvelle chanson */}
+      {/* 2. Carte d'action principale : Créer une nouvelle chanson */}
       <Box
-        p={{ base: "6", md: "8" }}
-        rounded="3xl"
+        p={{ base: "5", md: "6" }}
+        rounded="2xl"
         bg="paper.0"
-        borderWidth="2px"
-        borderColor="brand.violetDeep"
-        boxShadow="0 14px 35px -10px rgba(124, 58, 237, 0.16)"
-        position="relative"
-        overflow="hidden"
+        borderWidth="1px"
+        borderColor="paper.300"
       >
-        <Box
-          position="absolute"
-          right="-40px"
-          top="-40px"
-          boxSize="220px"
-          rounded="full"
-          bg="radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%)"
-          pointerEvents="none"
-        />
-
-        <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "flex-start", md: "center" }} gap="6" position="relative">
-          <Stack gap="2" maxW="xl">
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          justify="space-between"
+          align={{ base: "flex-start", md: "center" }}
+          gap="5"
+        >
+          <Stack gap="1.5" maxW="xl">
             <HStack gap="2">
-              <Badge rounded="full" px="2.5" py="1" bg="brand.violetTint" color="brand.violetDeep" fontSize="xs" fontWeight="700">
-                Studio IA Haute Fidélité
+              <Badge
+                rounded="full"
+                px="2.5"
+                py="0.5"
+                bg="brand.violetTint"
+                color="brand.violetDeep"
+                fontSize="2xs"
+                fontWeight="700"
+              >
+                Studio IA
               </Badge>
-              <Badge rounded="full" px="2" py="0.5" bg="paper.200" color="ink.600" fontSize="2xs">
-                Coût : 2 Notes
-              </Badge>
+              <Text fontSize="xs" color="ink.400">
+                2 Notes / chanson
+              </Text>
             </HStack>
-            <Text fontFamily="heading" fontWeight="800" fontSize={{ base: "xl", md: "3xl" }} color="ink.900" letterSpacing="-0.02em">
+            <Text
+              fontFamily="heading"
+              fontWeight="800"
+              fontSize={{ base: "lg", md: "2xl" }}
+              color="ink.900"
+              letterSpacing="-0.02em"
+            >
               Prêt à composer votre prochain titre ?
             </Text>
-            <Text fontSize="sm" color="ink.500">
-              Décrivez votre ambiance ou saisissez vos paroles. Les modèles IA de pointe composent les mélodies, les voix et le mastering en 30 secondes.
+            <Text fontSize="sm" color="ink.500" lineHeight="tall">
+              Décrivez votre ambiance ou saisissez vos paroles. L&apos;IA compose les mélodies, les voix et le mastering en 30 secondes.
             </Text>
           </Stack>
 
           <Button
-            size={{md: "xl", base: 'md'}}
+            size={{ base: "md", md: "lg" }}
             rounded="full"
             fontFamily="ui"
+            fontWeight="600"
             color="white"
             background={accent.primary}
-            _hover={{ transform: "translateY(-2px)", boxShadow: "0 8px 25px rgba(124, 58, 237, 0.35)" }}
-            transition="all 0.25s"
+            _hover={{ opacity: 0.92 }}
+            transition="all 0.2s"
             onClick={onOpenCreate}
             flexShrink={0}
           >
-            <LuWandSparkles size={20} /> Créer une chanson (2 Notes)
+            <LuWandSparkles size={18} /> Créer une chanson
           </Button>
         </Flex>
       </Box>
 
       {/* 3. Inspirations & idées rapides */}
-      <Stack gap="3">
+      <Stack gap="3" display={'none'}>
         <Flex justify="space-between" align="center" flexDir={{md: 'row', base: 'column'}}>
           <Text fontFamily="ui" fontWeight="700" fontSize="sm" color="ink.700" textTransform="uppercase" letterSpacing="wider">
             Inspirations en 1 clic
@@ -199,18 +209,20 @@ export default function StudioHome({
             </Button>
           </Box>
         ) : (
-          <Stack gap="2.5">
+          <Stack gap="0.5">
             {library.slice(0, 5).map((track) => {
               const isCurrent = activeTrack?.id === track.id;
               const trackPlaying = isCurrent && isPlaying;
+              const trackDuration = isCurrent ? (duration || track.seconds || 180) : (track.seconds || 180);
+              const trackCurrentTime = isCurrent ? currentTime : 0;
 
               return (
                 <Box
                   key={track.id}
-                  p="3.5"
-                  rounded="2xl"
+                  p="2"
+                  px={{base: '1', sm: '4'}}
                   bg={isCurrent ? "brand.violetTint" : "paper.50"}
-                  borderWidth="1.5px"
+                  borderBottomWidth="0.1px"
                   borderColor={isCurrent ? "brand.violetDeep" : "paper.200"}
                   _hover={{ borderColor: isCurrent ? "brand.violetDeep" : "paper.400", bg: isCurrent ? "brand.violetTint" : "paper.0" }}
                   transition="all 0.2s"
@@ -218,7 +230,7 @@ export default function StudioHome({
                   <Flex align="center" justify="space-between" gap="3">
                     <HStack gap="3" flex="1" minW="0">
                       {/* Bouton lecture rapide */}
-                      <IconButton
+                      {/* <IconButton
                         aria-label={trackPlaying ? "Pause" : "Écouter"}
                         size="md"
                         rounded="full"
@@ -229,24 +241,21 @@ export default function StudioHome({
                         flexShrink={0}
                       >
                         {trackPlaying ? <LuPause size={16} /> : <LuPlay size={16} />}
-                      </IconButton>
+                      </IconButton> */}
 
-                      {/* Vignette dégradée ou info titre */}
-                      <Box
-                        boxSize="10"
-                        rounded="xl"
-                        background={track.coverGradient || "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)"}
-                        display={{ base: "none", sm: "flex" }}
-                        alignItems="center"
-                        justifyContent="center"
-                        color="white"
-                        fontSize="xs"
-                        fontWeight="700"
-                        flexShrink={0}
-                      >
-                        🎵
+                      <Box position={'relative'} display={'flex'} justifyContent={'center'} alignItems="center">
+                        
+                        <Image
+                          src={track.coverUrl ? track.coverUrl : '/assets/13.png'}
+                          alt={track.title}
+                          boxSize={{base: "12", sm: '14'}}
+                          rounded="none"
+                          objectFit="cover"
+                          display={{ base: "block", sm: "block" }}
+                          flexShrink={0}
+                        />
                       </Box>
-
+                    
                       <Stack gap="0" flex="1" minW="0">
                         <HStack gap="2">
                           <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="ink.900" truncate>
@@ -255,24 +264,33 @@ export default function StudioHome({
                           {track.isFavorite && <Text color="red.500" fontSize="xs">❤️</Text>}
                         </HStack>
                         <Text fontSize="xs" color="ink.500" truncate>
-                          {track.meta}
+                          {track.meta || track.genre}
                         </Text>
                       </Stack>
                     </HStack>
 
-                    {/* Waveform discrète au centre */}
+                    {/* Waveform discrète au centre synchronisée */}
                     <Box w="100px" display={{ base: "none", md: "block" }}>
-                      <Waveform bars={16} height={22} gap="2px" animate={trackPlaying} />
+                      <Waveform
+                        bars={16}
+                        height={22}
+                        gap="2px"
+                        color="purple.500"
+                        currentTime={trackCurrentTime}
+                        duration={trackDuration}
+                        animate={trackPlaying}
+                        onSeek={isCurrent && onSeekTrack ? (seekSec) => onSeekTrack(seekSec) : undefined}
+                      />
                     </Box>
 
                     {/* Durée et actions */}
                     <HStack gap="2" flexShrink={0}>
-                      <HStack gap="1" color="ink.400" fontSize="xs" display={{ base: "none", sm: "flex" }}>
+                      {/* <HStack gap="1" color="ink.400" fontSize="xs" display={{ base: "none", sm: "flex" }}>
                         <LuClock size={12} />
                         <Text>{track.length || "1:00"}</Text>
-                      </HStack>
+                      </HStack> */}
 
-                      <IconButton
+                      {/* <IconButton
                         aria-label="Ajouter aux favoris"
                         size="sm"
                         variant="ghost"
@@ -281,18 +299,30 @@ export default function StudioHome({
                         onClick={() => onToggleFavorite(track.id)}
                       >
                         <LuHeart size={16} fill={track.isFavorite ? "currentColor" : "none"} />
-                      </IconButton>
+                      </IconButton> */}
 
-                      <Button
+                      <IconButton
+                          aria-label={trackPlaying ? "Pause" : "Écouter"}
+                          size="xs"
+                          variant={'surface'}
+                          rounded="full"
+                          colorPalette={'purple'}
+                          onClick={() => onPlayTrack(track)}
+                          boxShadow={trackPlaying ? "0 0 0 3px #c4b5fd" : "none"}
+                          flexShrink={0}
+                        >
+                          {trackPlaying ? <LuPause size={16} /> : <LuPlay size={16} />}
+                        </IconButton>
+
+                      <IconButton
                         size="xs"
                         rounded="full"
                         variant="outline"
-                        borderColor="paper.300"
-                        color="ink.700"
+                        colorPalette={'purple'}
                         onClick={() => downloadTrackAudio(track)}
                       >
-                        <LuDownload size={13} /> MP3
-                      </Button>
+                        <LuDownload size={13} />
+                      </IconButton>
                     </HStack>
                   </Flex>
                 </Box>

@@ -25,6 +25,19 @@ export function StudioProvider({ children }) {
   // Lecteur audio persistant
   const [activePlayerTrack, setActivePlayerTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [seekTime, setSeekTime] = useState(null);
+
+  const updateProgress = (cur, dur) => {
+    setCurrentTime(cur);
+    if (dur && !isNaN(dur) && dur > 0) setDuration(dur);
+  };
+
+  const seekTrack = (targetTime) => {
+    setSeekTime(targetTime);
+    setCurrentTime(targetTime);
+  };
 
   // Fonction de resynchronisation des crédits
   const refreshUserCredits = async () => {
@@ -151,6 +164,8 @@ export function StudioProvider({ children }) {
     } else {
       setActivePlayerTrack(track);
       setIsPlaying(true);
+      setCurrentTime(0);
+      setDuration(Number(track.seconds || track.duration) || 60);
     }
   };
 
@@ -161,6 +176,7 @@ export function StudioProvider({ children }) {
   const closePlayer = () => {
     setActivePlayerTrack(null);
     setIsPlaying(false);
+    setCurrentTime(0);
   };
 
   // Fonction de resynchronisation des morceaux
@@ -193,6 +209,11 @@ export function StudioProvider({ children }) {
         setConfig,
         activePlayerTrack,
         isPlaying,
+        currentTime,
+        duration,
+        seekTime,
+        updateProgress,
+        seekTrack,
         playTrack,
         togglePlay,
         closePlayer,

@@ -3,7 +3,7 @@
  * Connecté directement à l'API route Next.js /api/tracks/generate.
  *
  * Règle économique officielle : 1 chanson = 2 Notes
- * Aucune simulation fictive : retourne uniquement le vrai résultat audio de Suno API.
+ * Pas de Redis, pas de BullMQ : utilise l'API Suno, callBackUrl / webhooks et polling temps réel.
  */
 
 import { api, ApiError } from "@/lib/apiClient";
@@ -26,7 +26,7 @@ export const SUNO_MODELS = [
  * Étapes visuelles de génération
  */
 export const GENERATION_STAGES = [
-  { progress: 15, label: "Initialisation et transmission des paramètres à Suno AI..." },
+  { progress: 15, label: "Transmission des consignes créatives à l'IA..." },
   { progress: 35, label: "Écriture et structure mélodique..." },
   { progress: 55, label: "Arrangement instrumental et orchestration..." },
   { progress: 75, label: "Synthèse vocale et harmonisation des voix..." },
@@ -36,49 +36,60 @@ export const GENERATION_STAGES = [
 
 /**
  * Lance la génération d'un morceau via l'API backend melostars et suit son avancement en direct.
+ * Compatible avec le formulaire par étapes (Wizard) et le mode Suno direct.
  *
- * @param {Object} params Paramètres de composition conformes à Suno API
+ * @param {Object} params Paramètres de composition
  * @param {Function} [onProgress] Callback de progression (progress: number, label: string)
  * @returns {Promise<Object>} Morceau finalisé avec son URL audio réelle
  */
-export async function generateMusicWithAI(params, onProgress) {
-  const {
-    customMode = false,
-    instrumental = false,
-    model = "V6",
-    // Mode Standard (Non-Custom)
-    prompt = "",
-    style = "",
-    lyrics = "",
-    imageUrls = [],
-    videoUrls = [],
-    audioUrls = [],
-    // Mode Custom
-    title = "",
-    negativeTags = "",
-    vocalGender = null,
-    duration = 180,
-  } = params;
+export async function generateMusicWithAI(params = {}, onProgress) {
+  // Extraction compatible avec le wizard (genre, description, vocalType, occasion)
+  const description = params.description || params.story || params.prompt || "";
+  const genre = params.genre || params.style || "Afrobeat";
+  const vocalType = params.vocalType || "female";
+  const occasion = params.occasion || "birthday";
+
+  const isInstrumental =
+    typeof params.instrumental === "boolean"
+      ? params.instrumental
+      : vocalType === "instrumental";
+
+  const vocalGender =
+    params.vocalGender ||
+    (vocalType === "male" ? "m" : vocalType === "female" ? "f" : null);
+
+  const customMode = Boolean(params.customMode || params.customLyrics || (params.lyrics && params.lyrics.length > 0));
+  const model = params.model || "V6";
+  const lyrics = params.lyrics || params.customLyrics || "";
+  const title = params.title || "";
+  const negativeTags = params.negativeTags || "";
+  const duration = params.duration || 180;
 
   if (onProgress) {
-    onProgress(10, "Envoi de la requête de composition à Suno AI...");
+    onProgress(15, "Transmission des consignes créatives à l'IA...");
   }
 
   // 1. Appel POST vers notre API de génération
   const createRes = await api.post("/api/tracks/generate", {
+    description,
+    story: description,
+    prompt: params.prompt || description,
+    genre,
+    style: params.style || genre,
+    vocalType,
+    occasion,
+    vocalGender,
+    instrumental: isInstrumental,
     customMode,
-    instrumental,
     model,
-    prompt,
-    style,
     lyrics,
-    imageUrls,
-    videoUrls,
-    audioUrls,
+    customLyrics: lyrics,
     title,
     negativeTags,
-    vocalGender,
     duration,
+    imageUrls: params.imageUrls || [],
+    videoUrls: params.videoUrls || [],
+    audioUrls: params.audioUrls || [],
   });
 
   const trackId = createRes?.track?.id;
@@ -87,11 +98,11 @@ export async function generateMusicWithAI(params, onProgress) {
   }
 
   if (onProgress) {
-    onProgress(20, "Tâche enregistrée par Suno. Génération des multipistes en cours...");
+    onProgress(25, "Composition de la mélodie et des arrangements en cours...");
   }
 
   // 2. Polling asynchrone régulier toutes les 2.5 secondes
-  const maxAttempts = 60; // 60 * 2.5s = 150s (temps largement suffisant pour Suno V6)
+  const maxAttempts = 70; // 70 * 2.5s = 175s
   let attempts = 0;
 
   while (attempts < maxAttempts) {
@@ -105,41 +116,42 @@ export async function generateMusicWithAI(params, onProgress) {
       if (polledTrack.status === "COMPLETED") {
         if (onProgress) onProgress(100, "Morceau finalisé avec succès !");
 
-        const dur = Number(polledTrack.duration) || 180;
+        const dur = Number(polledTrack.duration) || duration || 180;
         const min = Math.floor(dur / 60);
         const sec = String(Math.floor(dur % 60)).padStart(2, "0");
 
         return {
           id: polledTrack.id,
           title: polledTrack.title,
-          genre: polledTrack.genre || style || "Pop",
+          genre: polledTrack.genre || genre,
           duration: dur,
           length: `${min}:${sec}`,
           seconds: dur,
-          vocalType: polledTrack.vocalType,
+          vocalType: polledTrack.vocalType || vocalType,
           audioUrl: polledTrack.audioUrl,
-          coverUrl: polledTrack.coverUrl,
+          coverUrl: polledTrack.coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
+          lyrics: polledTrack.lyrics || lyrics,
           lyricsText: polledTrack.lyrics || lyrics,
           createdAt: polledTrack.createdAt,
           isFavorite: polledTrack.isFavorite,
-          model,
+          model: polledTrack.model || model,
         };
       }
 
       if (polledTrack.status === "FAILED") {
-        throw new Error(polledTrack.errorMessage || "La génération audio a échoué chez Suno AI. Vos crédits ont été remboursés.");
+        throw new Error(polledTrack.errorMessage || "La composition audio a échoué chez Suno AI. Vos crédits ont été remboursés.");
       }
 
       // Calcul de la progression visuelle
-      const baseProgress = polledTrack.progress || 20;
-      const calculatedProgress = Math.min(95, Math.max(baseProgress, Math.round(attempts * 1.5) + 20));
+      const baseProgress = polledTrack.progress || 25;
+      const calculatedProgress = Math.min(95, Math.max(baseProgress, Math.round(attempts * 1.5) + 25));
       const stage = [...GENERATION_STAGES].reverse().find((s) => calculatedProgress >= s.progress);
 
       if (onProgress) {
-        onProgress(calculatedProgress, stage?.label || "Génération audio en cours chez Suno AI...");
+        onProgress(calculatedProgress, stage?.label || "Rendu audio studio en cours...");
       }
     }
   }
 
-  throw new Error("Délai d'attente de génération dépassé. Le morceau continue d'être traité en arrière-plan.");
+  throw new Error("Délai d'attente dépassé. La piste musicale continue son rendu sur les serveurs.");
 }

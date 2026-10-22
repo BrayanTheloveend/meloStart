@@ -4,8 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { deductCredits, refundCredits, DEFAULT_TRACK_COST } from "@/lib/credits";
 import { generateSunoMusic } from "@/lib/sunoService";
 
-export const dynamic = "force-dynamic";
-
 /**
  * POST /api/tracks/generate
  * Approche simple, directe et 100% conforme à la documentation officielle Suno API.

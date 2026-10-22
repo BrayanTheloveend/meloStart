@@ -73,6 +73,14 @@ export default function StudioShell({ initialTab = "home" }) {
   // Lecteur audio persistant
   const [activePlayerTrack, setActivePlayerTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playerCurrentTime, setPlayerCurrentTime] = useState(0);
+  const [playerDuration, setPlayerDuration] = useState(0);
+  const [seekRequest, setSeekRequest] = useState(null);
+
+  const handleSeekTrack = (targetTime) => {
+    setSeekRequest(targetTime);
+    setPlayerCurrentTime(targetTime);
+  };
 
   // Synchronisation de l'onglet actif avec initialTab et query params URL
   useEffect(() => {
@@ -264,10 +272,9 @@ export default function StudioShell({ initialTab = "home" }) {
   // En mode création : masquer la sidebar (web) et le bottom navigation (mobile) pour une concentration maximale
   if (activeTab === "create") {
     return (
-      <Box minH="100dvh" bg="#09090d" color="#f4f4f7" position="relative" overflowX="hidden" py="4">
+      <Box minH="100dvh" bg="paper.50" color="ink.900" position="relative" overflowX="hidden">
         <GeneratorPanel
           notes={notes}
-          onBack={() => setActiveTab("explore")}
           onOpenRecharge={() => router.push("/studio/recharge")}
           onDeductNotes={(cost) => updateNotes(notes - cost)}
           onTrackCreated={(createdTrack) => {
@@ -533,6 +540,9 @@ export default function StudioShell({ initialTab = "home" }) {
               onOpenRecharge={() => router.push("/studio/recharge")}
               activeTrack={activePlayerTrack}
               isPlaying={isPlaying}
+              currentTime={playerCurrentTime}
+              duration={playerDuration}
+              onSeekTrack={handleSeekTrack}
               onPlayTrack={handlePlayTrack}
               onToggleFavorite={handleToggleFavorite}
               onPreloadPrompt={handlePreloadPrompt}
@@ -572,6 +582,9 @@ export default function StudioShell({ initialTab = "home" }) {
               library={library}
               activeTrack={activePlayerTrack}
               isPlaying={isPlaying}
+              currentTime={playerCurrentTime}
+              duration={playerDuration}
+              onSeekTrack={handleSeekTrack}
               onPlayTrack={handlePlayTrack}
               onToggleFavorite={handleToggleFavorite}
               onDeleteTrack={handleDeleteTrack}
@@ -709,8 +722,14 @@ export default function StudioShell({ initialTab = "home" }) {
         onClose={() => {
           setActivePlayerTrack(null);
           setIsPlaying(false);
+          setPlayerCurrentTime(0);
         }}
         onToggleFavorite={handleToggleFavorite}
+        onProgress={(cur, dur) => {
+          setPlayerCurrentTime(cur);
+          if (dur && !isNaN(dur) && dur > 0) setPlayerDuration(dur);
+        }}
+        seekRequest={seekRequest}
       />
     </Flex>
   );

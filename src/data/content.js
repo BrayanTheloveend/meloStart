@@ -122,7 +122,25 @@ export const footerColumns = [
 ];
 
 export const sampleTracks = [
-  { id: 1, title: "Lumières de juillet", meta: "Afrobeat · Joyeux · 108 BPM", length: "2:14" },
-  { id: 2, title: "Le dernier train", meta: "Lo-fi · Nostalgique · 82 BPM", length: "1:48" },
-  { id: 3, title: "Neon Horizons", meta: "Synthwave · Épique · 124 BPM", length: "3:02" },
+  {
+    id: 1,
+    title: "Lumières de juillet",
+    meta: "Afrobeat · Joyeux · 108 BPM",
+    length: "2:14",
+    coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop",
+  },
+  {
+    id: 2,
+    title: "Le dernier train",
+    meta: "Lo-fi · Nostalgique · 82 BPM",
+    length: "1:48",
+    coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
+  },
+  {
+    id: 3,
+    title: "Neon Horizons",
+    meta: "Synthwave · Épique · 124 BPM",
+    length: "3:02",
+    coverUrl: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop",
+  },
 ];

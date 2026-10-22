@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Image, Stack, Text } from "@chakra-ui/react";
 import { LuPlay } from "react-icons/lu";
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
@@ -14,9 +14,20 @@ export default function TrackList({ tracks }) {
       </Text>
       {tracks.map((t) => (
         <HStack key={t.id} gap="4" p="3" rounded="xl" _hover={{ bg: "paper.50" }} transition="background .2s">
-          <Flex boxSize="10" flexShrink={0} rounded="full" align="center" justify="center" color="white" background={accent.primary}>
-            <LuPlay size={15} />
-          </Flex>
+          {t.coverUrl ? (
+            <Image
+              src={t.coverUrl}
+              alt={t.title}
+              boxSize="10"
+              rounded="xl"
+              objectFit="cover"
+              flexShrink={0}
+            />
+          ) : (
+            <Flex boxSize="10" flexShrink={0} rounded="full" align="center" justify="center" color="white" background={accent.primary}>
+              <LuPlay size={15} />
+            </Flex>
+          )}
           <Stack gap="0" flex="1" minW="0">
             <Text fontFamily="ui" fontWeight="600" truncate>
               {t.title}

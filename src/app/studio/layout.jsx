@@ -45,7 +45,16 @@ function StudioLayoutContent({ children }) {
   const pathname = usePathname() || "/studio";
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { notes, activePlayerTrack, isPlaying, togglePlay, closePlayer, toggleFavorite } = useStudio();
+  const {
+    notes,
+    activePlayerTrack,
+    isPlaying,
+    togglePlay,
+    closePlayer,
+    toggleFavorite,
+    updateProgress,
+    seekTime,
+  } = useStudio();
 
   const handleSignOut = async () => {
     try {
@@ -487,6 +496,8 @@ function StudioLayoutContent({ children }) {
         onTogglePlay={togglePlay}
         onClose={closePlayer}
         onToggleFavorite={toggleFavorite}
+        onProgress={updateProgress}
+        seekRequest={seekTime}
       />
     </Flex>
   );

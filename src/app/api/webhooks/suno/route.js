@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { refundCredits } from "@/lib/credits";
 
-export const dynamic = "force-dynamic";
 
 /**
  * POST /api/webhooks/suno

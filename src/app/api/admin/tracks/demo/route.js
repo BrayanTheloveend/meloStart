@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { saveBufferToPublic } from "@/lib/storage";
-import { generateSunoMusic, buildHarmonizedMusicDirectives } from "@/lib/sunoService";
+import { generateSunoMusic } from "@/lib/sunoService";
 
 /**
  * POST /api/admin/tracks/demo
@@ -158,27 +158,19 @@ export async function POST(req) {
 
     // 4. Option B : Génération via Suno AI
     if (generateWithAI) {
-      const directives = buildHarmonizedMusicDirectives({
-        prompt: prompt || `Chanson ${genre} solaire et entraînante pour l'accueil`,
-        genre,
-        moods,
-        vocalType,
-        language,
-        lyrics,
-        title,
-      });
+      const isCustomMode = Boolean(lyrics && lyrics.trim());
+      const isInstrumental = vocalType === "instrumental";
 
       try {
         const sunoTask = await generateSunoMusic({
-          prompt: directives.prompt,
-          lyrics: directives.lyrics,
-          style: directives.style,
-          title: directives.title,
-          customMode: directives.customMode,
-          instrumental: directives.instrumental,
-          model: directives.model,
+          prompt: prompt?.trim() || `Chanson ${genre} solaire et entraînante pour l'accueil`,
+          lyrics: lyrics?.trim() || undefined,
+          style: genre,
+          title: title?.trim() || `${genre} Demo`,
+          customMode: isCustomMode,
+          instrumental: isInstrumental,
+          model: "V6",
           callBackUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/webhooks/suno`,
-          negativeTags: directives.negativeTags,
         });
 
         const updated = await prisma.track.update({

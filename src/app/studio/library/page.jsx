@@ -12,6 +12,9 @@ export default function StudioLibraryPage() {
     isLoadingStudio,
     activePlayerTrack,
     isPlaying,
+    currentTime,
+    duration,
+    seekTrack,
     playTrack,
     toggleFavorite,
     deleteTrack,
@@ -24,6 +27,9 @@ export default function StudioLibraryPage() {
         isLoading={isLoadingStudio}
         activeTrack={activePlayerTrack}
         isPlaying={isPlaying}
+        currentTime={currentTime}
+        duration={duration}
+        onSeekTrack={seekTrack}
         onPlayTrack={playTrack}
         onToggleFavorite={toggleFavorite}
         onDeleteTrack={deleteTrack}

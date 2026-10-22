@@ -1,8 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Box, Button, Center, Flex, Grid, HStack, IconButton, Input, Spinner, Stack, Text } from "@chakra-ui/react";
-import { LuClock, LuDownload, LuHeart, LuMusic, LuPause, LuPlay, LuPlus, LuSearch, LuTrash2 } from "react-icons/lu";
+import {
+  Badge,
+  Box,
+  Button,
+  Center,
+  Flex,
+  HStack,
+  IconButton,
+  Image,
+  Input,
+  Spinner,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
+import {
+  LuClock,
+  LuDownload,
+  LuHeart,
+  LuMusic,
+  LuPause,
+  LuPlay,
+  LuPlus,
+  LuSearch,
+  LuShuffle,
+  LuTrash2,
+} from "react-icons/lu";
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
 import { downloadTrackAudio } from "@/lib/downloadTrack";
@@ -12,6 +36,9 @@ export default function StudioLibrary({
   isLoading = false,
   activeTrack,
   isPlaying,
+  currentTime = 0,
+  duration = 0,
+  onSeekTrack,
   onPlayTrack,
   onToggleFavorite,
   onDeleteTrack,
@@ -25,26 +52,55 @@ export default function StudioLibrary({
     downloadTrackAudio(track);
   };
 
-  const genres = ["all", "Afrobeat", "Pop", "Rap", "Électro", "Folk", "Lo-fi"];
+  const genres = ["all", "Afrobeat", "Pop", "Rap", "Électro", "Folk", "Lo-fi", "R&B"];
 
   const filtered = library.filter((t) => {
     const matchesSearch =
-      t.title.toLowerCase().includes(search.toLowerCase()) ||
-      (t.meta && t.meta.toLowerCase().includes(search.toLowerCase()));
-    const matchesGenre = filterGenre === "all" || (t.genre && t.genre.toLowerCase() === filterGenre.toLowerCase());
+      t.title?.toLowerCase().includes(search.toLowerCase()) ||
+      (t.meta && t.meta.toLowerCase().includes(search.toLowerCase())) ||
+      (t.genre && t.genre.toLowerCase().includes(search.toLowerCase()));
+    const matchesGenre =
+      filterGenre === "all" ||
+      (t.genre && t.genre.toLowerCase() === filterGenre.toLowerCase());
     return matchesSearch && matchesGenre;
   });
+
+  // Bouton de lecture aléatoire (Shuffle)
+  const handleShufflePlay = () => {
+    if (filtered.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * filtered.length);
+    onPlayTrack(filtered[randomIndex]);
+  };
 
   return (
     <Stack gap="6" p={{ base: "5", md: "8" }} maxW="6xl" mx="auto">
       {/* En-tête */}
-      <Flex justify="space-between" align={{ base: "flex-start", sm: "center" }} direction={{ base: "column", sm: "row" }} gap="4">
+      <Flex
+        justify="space-between"
+        align={{ base: "flex-start", sm: "center" }}
+        direction={{ base: "column", sm: "row" }}
+        gap="4"
+      >
         <Box>
           <HStack gap="2">
-            <Text fontFamily="heading" fontWeight="800" fontSize={{ base: "2xl", md: "3xl" }} color="ink.900" letterSpacing="-0.03em">
+            <Text
+              fontFamily="heading"
+              fontWeight="800"
+              fontSize={{ base: "2xl", md: "3xl" }}
+              color="ink.900"
+              letterSpacing="-0.03em"
+            >
               Votre Bibliothèque
             </Text>
-            <Badge rounded="full" bg="brand.violetTint" color="brand.violetDeep" px="2.5" py="0.5" fontFamily="ui" fontWeight="600">
+            <Badge
+              rounded="full"
+              bg="brand.violetTint"
+              color="brand.violetDeep"
+              px="2.5"
+              py="0.5"
+              fontFamily="ui"
+              fontWeight="600"
+            >
               {library.length} titre{library.length > 1 ? "s" : ""}
             </Badge>
           </HStack>
@@ -53,13 +109,43 @@ export default function StudioLibrary({
           </Text>
         </Box>
 
-        <Button rounded="full" color="white" background={accent.primary} onClick={onOpenCreate}>
-          <LuPlus /> Nouvelle création (2 Notes)
-        </Button>
+        <HStack gap="2.5">
+          {/* Bouton Shuffle conservé */}
+          {filtered.length > 0 && (
+            <IconButton
+              size="md"
+              rounded="full"
+              variant="outline"
+              borderColor="paper.300"
+              color="ink.700"
+              _hover={{ borderColor: "brand.violetDeep", color: "brand.violetDeep", bg: "brand.violetTint" }}
+              onClick={handleShufflePlay}
+              aria-label="Lecture aléatoire"
+              title="Lecture aléatoire (Shuffle)"
+            >
+              <LuShuffle size={18} />
+            </IconButton>
+          )}
+
+          <Button
+            rounded="full"
+            color="white"
+            background={accent.primary}
+            onClick={onOpenCreate}
+            boxShadow="0 4px 18px rgba(124, 58, 237, 0.3)"
+          >
+            <LuPlus /> Nouvelle création (2 Notes)
+          </Button>
+        </HStack>
       </Flex>
 
       {/* Barre de recherche et filtres de genres */}
-      <Flex direction={{ base: "column", md: "row" }} gap="3" align={{ base: "stretch", md: "center" }} justify="space-between">
+      <Flex
+        direction={{ base: "column", md: "row" }}
+        gap="3"
+        align={{ base: "stretch", md: "center" }}
+        justify="space-between"
+      >
         <Box position="relative" maxW={{ base: "full", md: "320px" }}>
           <Input
             value={search}
@@ -71,7 +157,14 @@ export default function StudioLibrary({
             borderColor="paper.300"
             _focusVisible={{ borderColor: "brand.violet" }}
           />
-          <Box position="absolute" left="3" top="50%" transform="translateY(-50%)" color="ink.400" pointerEvents="none">
+          <Box
+            position="absolute"
+            left="3"
+            top="50%"
+            transform="translateY(-50%)"
+            color="ink.400"
+            pointerEvents="none"
+          >
             <LuSearch size={16} />
           </Box>
         </Box>
@@ -96,7 +189,7 @@ export default function StudioLibrary({
         </Flex>
       </Flex>
 
-      {/* Liste des créations */}
+      {/* Liste des créations au design carte précédent */}
       {isLoading ? (
         <Center py="16" flexDirection="column" gap="3">
           <Spinner size="xl" color="brand.violetDeep" />
@@ -128,102 +221,129 @@ export default function StudioLibrary({
             return (
               <Box
                 key={track.id}
-                p="4"
-                rounded="2xl"
+                p="2"
+                px={{base: '1', sm: '2'}}
                 bg={isCurrent ? "brand.violetTint" : "paper.50"}
-                borderWidth="1.5px"
+                borderBottomWidth="0.9px"
                 borderColor={isCurrent ? "brand.violetDeep" : "paper.200"}
-                _hover={{ borderColor: isCurrent ? "brand.violetDeep" : "paper.400", bg: isCurrent ? "brand.violetTint" : "paper.0" }}
+                _hover={{
+                  borderColor: isCurrent ? "brand.violetDeep" : "paper.400",
+                  bg: isCurrent ? "brand.violetTint" : "paper.0",
+                }}
                 transition="all 0.2s"
               >
-                <Flex align="center" justify="space-between" gap="4">
-                  <HStack gap="3.5" flex="1" minW="0">
-                    <IconButton
+               <Flex align="center" justify="space-between" gap="3">
+                <HStack gap="3" flex="1" minW="0">
+                  {/* Bouton lecture rapide */}
+                  {/* <IconButton
+                    aria-label={trackPlaying ? "Pause" : "Écouter"}
+                    size="md"
+                    rounded="full"
+                    color="white"
+                    background={accent.primary}
+                    onClick={() => onPlayTrack(track)}
+                    boxShadow={trackPlaying ? "0 0 0 3px #c4b5fd" : "none"}
+                    flexShrink={0}
+                  >
+                    {trackPlaying ? <LuPause size={16} /> : <LuPlay size={16} />}
+                  </IconButton> */}
+
+                  <Box position={'relative'} display={'flex'} justifyContent={'center'} alignItems="center">
+                    
+                    <Image
+                      src={track.coverUrl ? track.coverUrl : '/assets/13.png'}
+                      alt={track.title}
+                      boxSize={{base: "12", sm: '14'}}
+                      rounded="none"
+                      objectFit="cover"
+                      display={{ base: "block", sm: "block" }}
+                      flexShrink={0}
+                    />
+                  </Box>
+                
+                  <Stack gap="0" flex="1" minW="0">
+                    <HStack gap="2">
+                      <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="ink.900" truncate>
+                        {track.title}
+                      </Text>
+                      {track.isFavorite && <Text color="red.500" fontSize="xs">❤️</Text>}
+                    </HStack>
+                    <Text fontSize="xs" color="ink.500" truncate>
+                      {track.meta || track.genre}
+                    </Text>
+                  </Stack>
+                </HStack>
+
+                {/* Waveform discrète au centre synchronisée */}
+                <Box w="100px" display={{ base: "none", md: "block" }}>
+                  <Waveform
+                    bars={16}
+                    height={22}
+                    gap="2px"
+                    color="purple.500"
+                    currentTime={isCurrent ? currentTime : 0}
+                    duration={isCurrent ? (duration || track.seconds || 180) : (track.seconds || 180)}
+                    animate={trackPlaying}
+                    onSeek={isCurrent && onSeekTrack ? (seekSec) => onSeekTrack(seekSec) : undefined}
+                  />
+                </Box>
+
+                {/* Durée et actions */}
+                <HStack gap="2" flexShrink={0}>
+                  {/* <HStack gap="1" color="ink.400" fontSize="xs" display={{ base: "none", sm: "flex" }}>
+                    <LuClock size={12} />
+                    <Text>{track.length || "1:00"}</Text>
+                  </HStack> */}
+
+                  {/* <IconButton
+                    aria-label="Ajouter aux favoris"
+                    size="sm"
+                    variant="ghost"
+                    rounded="full"
+                    color={track.isFavorite ? "red.500" : "ink.400"}
+                    onClick={() => onToggleFavorite(track.id)}
+                  >
+                    <LuHeart size={16} fill={track.isFavorite ? "currentColor" : "none"} />
+                  </IconButton> */}
+
+                  <IconButton
                       aria-label={trackPlaying ? "Pause" : "Écouter"}
-                      size="md"
+                      size="xs"
+                      variant={'surface'}
                       rounded="full"
-                      color="white"
-                      background={accent.primary}
+                      colorPalette={'purple'}
                       onClick={() => onPlayTrack(track)}
+                      boxShadow={trackPlaying ? "0 0 0 3px #c4b5fd" : "none"}
                       flexShrink={0}
                     >
                       {trackPlaying ? <LuPause size={16} /> : <LuPlay size={16} />}
                     </IconButton>
 
-                    <Box
-                      boxSize="12"
-                      rounded="xl"
-                      background={track.coverGradient || "linear-gradient(135deg, #7c3aed 0%, #ec4899 100%)"}
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      color="white"
-                      fontSize="lg"
-                      flexShrink={0}
-                    >
-                      🎵
-                    </Box>
+                  <IconButton
+                    size="xs"
+                    rounded="full"
+                    variant="gohst"
+                    
+                    onClick={() => downloadTrackAudio(track)}
+                  >
+                    <LuDownload size={13} />
+                  </IconButton>
+                    {onDeleteTrack && (
+                      <IconButton
+                        aria-label="Supprimer"
+                        size="sm"
+                        variant="ghost"
+                        rounded="full"
+                        color="ink.400"
+                        _hover={{ color: "red.500" }}
+                        onClick={() => onDeleteTrack(track.id)}
+                      >
+                        <LuTrash2 size={16} />
+                      </IconButton>
+                    )} 
+                </HStack>
 
-                    <Stack gap="0" flex="1" minW="0">
-                      <HStack gap="2">
-                        <Text fontFamily="heading" fontWeight="700" fontSize="md" color="ink.900" truncate>
-                          {track.title}
-                        </Text>
-                        <Badge size="xs" rounded="full" bg="paper.200" color="ink.700">
-                          {track.genre || "Pop"}
-                        </Badge>
-                      </HStack>
-                      <Text fontSize="xs" color="ink.500" truncate>
-                        {track.meta}
-                      </Text>
-                    </Stack>
-                  </HStack>
-
-                  <Box w="140px" display={{ base: "none", lg: "block" }}>
-                    <Waveform bars={20} height={24} gap="2px" animate={trackPlaying} />
-                  </Box>
-
-                  <HStack gap="2" flexShrink={0}>
-                    <HStack gap="1" color="ink.400" fontSize="xs" display={{ base: "none", sm: "flex" }}>
-                      <LuClock size={12} />
-                      <Text>{track.length || "1:00"}</Text>
-                    </HStack>
-
-                    <IconButton
-                      aria-label="Favoris"
-                      size="sm"
-                      variant="ghost"
-                      rounded="full"
-                      color={track.isFavorite ? "red.500" : "ink.400"}
-                      onClick={() => onToggleFavorite(track.id)}
-                    >
-                      <LuHeart size={16} fill={track.isFavorite ? "currentColor" : "none"} />
-                    </IconButton>
-
-                    <Button
-                      size="xs"
-                      rounded="full"
-                      variant="outline"
-                      borderColor="paper.300"
-                      color="ink.700"
-                      onClick={() => handleDownloadTrack(track)}
-                    >
-                      <LuDownload size={13} /> Télécharger
-                    </Button>
-
-                    <IconButton
-                      aria-label="Supprimer"
-                      size="sm"
-                      variant="ghost"
-                      rounded="full"
-                      color="ink.400"
-                      _hover={{ color: "red.500" }}
-                      onClick={() => onDeleteTrack && onDeleteTrack(track.id)}
-                    >
-                      <LuTrash2 size={16} />
-                    </IconButton>
-                  </HStack>
-                </Flex>
+              </Flex>
               </Box>
             );
           })}
