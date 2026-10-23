@@ -237,7 +237,6 @@ export default function StudioShell({ initialTab = "home" }) {
 
   // Suppression d'un morceau
   const handleDeleteTrack = (trackId) => {
-    if (!window.confirm("Supprimer définitivement ce morceau ?")) return;
     const updated = library.filter((t) => t.id !== trackId);
     setLibrary(updated);
     try {

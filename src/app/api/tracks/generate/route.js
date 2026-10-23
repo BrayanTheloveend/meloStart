@@ -55,10 +55,13 @@ export async function POST(req) {
       vocalGender = null,
       duration = null,
       callBackUrl = null,
+      isPublic: reqIsPublic,
     } = body;
 
     const isCustom = Boolean(customMode);
     const isInstrumental = Boolean(instrumental);
+    const isAdmin = session.user?.role === "ADMIN";
+    const trackIsPublic = reqIsPublic !== undefined ? Boolean(reqIsPublic) : Boolean(isAdmin);
 
     // Validation des entrées selon la documentation Suno
     if (isCustom) {
@@ -138,6 +141,7 @@ export async function POST(req) {
         duration: Number(duration) || 180,
         status: "PROCESSING",
         progress: 15,
+        isPublic: trackIsPublic,
       },
     });
 

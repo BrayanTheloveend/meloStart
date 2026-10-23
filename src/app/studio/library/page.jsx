@@ -17,6 +17,7 @@ export default function StudioLibraryPage() {
     seekTrack,
     playTrack,
     toggleFavorite,
+    togglePublic,
     deleteTrack,
   } = useStudio();
 
@@ -32,6 +33,7 @@ export default function StudioLibraryPage() {
         onSeekTrack={seekTrack}
         onPlayTrack={playTrack}
         onToggleFavorite={toggleFavorite}
+        onTogglePublic={togglePublic}
         onDeleteTrack={deleteTrack}
         onOpenCreate={() => router.push("/studio/create")}
       />

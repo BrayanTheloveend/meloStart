@@ -9,7 +9,7 @@ import { useStudio } from "@/context/StudioContext";
 function StudioCreateContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { notes, updateNotes, addTrack, toggleFavorite, playTrack, config } = useStudio();
+  const { notes, updateNotes, addTrack, toggleFavorite, togglePublic, playTrack, config } = useStudio();
 
   const [initialData, setInitialData] = useState({
     musicStyle: config.genre || "Afrobeat",
@@ -38,6 +38,7 @@ function StudioCreateContent() {
       onTrackCreated={(newTrack) => addTrack(newTrack)}
       initialData={initialData}
       onToggleFavorite={toggleFavorite}
+      onTogglePublic={togglePublic}
       onPlayTrack={playTrack}
     />
   );

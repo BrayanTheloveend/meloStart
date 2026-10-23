@@ -137,6 +137,30 @@ export function StudioProvider({ children }) {
     }
   };
 
+  const togglePublic = async (trackId) => {
+    const currentTrack = library.find((t) => t.id === trackId);
+    if (!currentTrack) return;
+    const newPublicState = !currentTrack.isPublic;
+
+    // Mise à jour optimiste de la bibliothèque locale
+    const updated = library.map((t) => (t.id === trackId ? { ...t, isPublic: newPublicState } : t));
+    setLibrary(updated);
+    try {
+      localStorage.setItem("melostars_library", JSON.stringify(updated));
+    } catch (_) {}
+
+    if (activePlayerTrack?.id === trackId) {
+      setActivePlayerTrack((prev) => (prev ? { ...prev, isPublic: newPublicState } : null));
+    }
+
+    // Persistance API serveur
+    try {
+      await api.patch(`/api/tracks/${trackId}`, { isPublic: newPublicState });
+    } catch (err) {
+      console.warn("[StudioContext] Échec persistance visibilité publique:", err.message);
+    }
+  };
+
   const deleteTrack = async (trackId) => {
     // Mise à jour optimiste
     const updated = library.filter((t) => t.id !== trackId);
@@ -204,6 +228,7 @@ export function StudioProvider({ children }) {
         refreshTracks,
         addTrack,
         toggleFavorite,
+        togglePublic,
         deleteTrack,
         config,
         setConfig,

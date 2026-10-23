@@ -90,6 +90,7 @@ export async function generateMusicWithAI(params = {}, onProgress) {
     imageUrls: params.imageUrls || [],
     videoUrls: params.videoUrls || [],
     audioUrls: params.audioUrls || [],
+    isPublic: params.isPublic,
   });
 
   const trackId = createRes?.track?.id;

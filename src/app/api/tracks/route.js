@@ -26,13 +26,27 @@ export async function GET(req) {
     const where = {};
 
     if (isPublic) {
-      where.isPublic = true;
       where.status = "COMPLETED";
+      where.AND = [
+        {
+          OR: [
+            { isPublic: true },
+            { user: { role: "ADMIN" } },
+          ],
+        },
+      ];
     } else {
       if (!session?.user?.id) {
         // Utilisateur non connecté demandant ses pistes -> fallback sur pistes publiques
-        where.isPublic = true;
         where.status = "COMPLETED";
+        where.AND = [
+          {
+            OR: [
+              { isPublic: true },
+              { user: { role: "ADMIN" } },
+            ],
+          },
+        ];
       } else {
         where.userId = session.user.id;
       }
@@ -51,11 +65,18 @@ export async function GET(req) {
     }
 
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { prompt: { contains: search, mode: "insensitive" } },
-        { genre: { contains: search, mode: "insensitive" } },
-      ];
+      const searchFilter = {
+        OR: [
+          { title: { contains: search, mode: "insensitive" } },
+          { prompt: { contains: search, mode: "insensitive" } },
+          { genre: { contains: search, mode: "insensitive" } },
+        ],
+      };
+      if (where.AND) {
+        where.AND.push(searchFilter);
+      } else {
+        where.OR = searchFilter.OR;
+      }
     }
 
     const [tracks, total] = await Promise.all([

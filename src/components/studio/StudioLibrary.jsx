@@ -18,7 +18,9 @@ import {
 import {
   LuClock,
   LuDownload,
+  LuGlobe,
   LuHeart,
+  LuLock,
   LuMusic,
   LuPause,
   LuPlay,
@@ -41,6 +43,7 @@ export default function StudioLibrary({
   onSeekTrack,
   onPlayTrack,
   onToggleFavorite,
+  onTogglePublic,
   onDeleteTrack,
   onOpenCreate,
 }) {
@@ -50,6 +53,16 @@ export default function StudioLibrary({
   const handleDownloadTrack = (track) => {
     if (!track) return;
     downloadTrackAudio(track);
+  };
+
+  const handleDeleteTrack = (track) => {
+    if (!onDeleteTrack || !track) return;
+    const confirmMessage = track.title
+      ? `Êtes-vous sûr de vouloir supprimer "${track.title}" ?`
+      : "Êtes-vous sûr de vouloir supprimer ce morceau ?";
+    if (window.confirm(confirmMessage)) {
+      onDeleteTrack(track.id);
+    }
   };
 
   const genres = ["all", "Afrobeat", "Pop", "Rap", "Électro", "Folk", "Lo-fi", "R&B"];
@@ -262,11 +275,20 @@ export default function StudioLibrary({
                   </Box>
                 
                   <Stack gap="0" flex="1" minW="0">
-                    <HStack gap="2">
+                    <HStack gap="2" wrap="wrap">
                       <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="ink.900" truncate>
                         {track.title}
                       </Text>
                       {track.isFavorite && <Text color="red.500" fontSize="xs">❤️</Text>}
+                      {track.isPublic ? (
+                        <Badge size="xs" colorPalette="green" variant="subtle" rounded="full" px="2" title="Visible sur la page d'accueil">
+                          🌐 Public
+                        </Badge>
+                      ) : (
+                        <Badge size="xs" colorPalette="gray" variant="subtle" rounded="full" px="2" title="Privé (masqué de l'accueil)">
+                          🔒 Privé
+                        </Badge>
+                      )}
                     </HStack>
                     <Text fontSize="xs" color="ink.500" truncate>
                       {track.meta || track.genre}
@@ -322,12 +344,31 @@ export default function StudioLibrary({
                   <IconButton
                     size="xs"
                     rounded="full"
-                    variant="gohst"
-                    
+                    variant="ghost"
                     onClick={() => downloadTrackAudio(track)}
+                    title="Télécharger l'audio"
                   >
                     <LuDownload size={13} />
                   </IconButton>
+
+                  {onTogglePublic && (
+                    <IconButton
+                      aria-label={track.isPublic ? "Rendre privé (masquer de l'accueil)" : "Rendre public (afficher sur l'accueil)"}
+                      title={
+                        track.isPublic
+                          ? "Public : Visible sur l'accueil (cliquer pour masquer)"
+                          : "Privé : Masqué de l'accueil (cliquer pour afficher sur l'accueil)"
+                      }
+                      size="xs"
+                      variant="ghost"
+                      rounded="full"
+                      color={track.isPublic ? "green.600" : "ink.400"}
+                      _hover={{ color: track.isPublic ? "red.500" : "green.600" }}
+                      onClick={() => onTogglePublic(track.id)}
+                    >
+                      {track.isPublic ? <LuGlobe size={14} /> : <LuLock size={14} />}
+                    </IconButton>
+                  )}
                     {onDeleteTrack && (
                       <IconButton
                         aria-label="Supprimer"
@@ -336,7 +377,7 @@ export default function StudioLibrary({
                         rounded="full"
                         color="ink.400"
                         _hover={{ color: "red.500" }}
-                        onClick={() => onDeleteTrack(track.id)}
+                        onClick={() => handleDeleteTrack(track)}
                       >
                         <LuTrash2 size={16} />
                       </IconButton>

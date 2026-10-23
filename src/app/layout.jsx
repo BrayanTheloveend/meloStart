@@ -22,6 +22,9 @@ export const metadata = {
   title: "melostars — Créez votre musique personnalisée par IA",
   description:
     "Décrivez la musique dont vous rêvez : melostars compose le style, les paroles et la voix en quelques secondes.",
+  verification: {
+    google: "1HOYllF5TrmwmrbBYiY4o6kiwcB_9LntH5JOypo6p_o",
+  },
 };
 
 export default function RootLayout({ children }) {

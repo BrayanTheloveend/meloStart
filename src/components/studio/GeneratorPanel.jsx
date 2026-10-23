@@ -29,9 +29,11 @@ import {
   LuCopy,
   LuDownload,
   LuFileText,
+  LuGlobe,
   LuHeart,
   LuHouse,
   LuImage,
+  LuLock,
   LuMic,
   LuMusic,
   LuPause,
@@ -138,10 +140,12 @@ export default function GeneratorPanel({
   onDeductNotes,
   initialData = {},
   onToggleFavorite,
+  onTogglePublic,
   onPlayTrack,
 }) {
   const router = useRouter();
   const { data: session } = useSession();
+  const [isPublicTrack, setIsPublicTrack] = useState(session?.user?.role === "ADMIN");
 
   // Stepper d'étapes :
   // 1 (Occasion) -> 2 (Histoire & Paroles) -> 3 (Voix) -> 4 (Style & Modèle) -> 5 (Vérification & Lancement)
@@ -410,6 +414,7 @@ export default function GeneratorPanel({
       imageUrls: isCustom ? [] : imageUrls,
       videoUrls: isCustom ? [] : videoUrls,
       audioUrls: isCustom ? [] : audioUrls,
+      isPublic: isPublicTrack,
     };
 
     try {
@@ -1582,6 +1587,53 @@ export default function GeneratorPanel({
                 </Stack>
               </Box>
 
+              {/* Choix de visibilité publique ou privée */}
+              <Flex
+                p="3.5"
+                rounded="2xl"
+                bg="paper.50"
+                borderWidth="1.5px"
+                borderColor={isPublicTrack ? "green.300" : "paper.200"}
+                justify="space-between"
+                align="center"
+                cursor="pointer"
+                onClick={() => setIsPublicTrack(!isPublicTrack)}
+                _hover={{ borderColor: isPublicTrack ? "green.400" : "brand.violet" }}
+                transition="all 0.2s"
+              >
+                <HStack gap="3" align="center">
+                  <Flex
+                    boxSize="9"
+                    rounded="full"
+                    align="center"
+                    justify="center"
+                    bg={isPublicTrack ? "green.100" : "paper.200"}
+                    color={isPublicTrack ? "green.600" : "ink.400"}
+                  >
+                    {isPublicTrack ? <LuGlobe size={18} /> : <LuLock size={18} />}
+                  </Flex>
+                  <Box textAlign="left">
+                    <Text fontSize="xs" fontWeight="700" color="ink.900">
+                      {isPublicTrack ? "🌐 Public (affiché sur la page d'accueil)" : "🔒 Privé (invisible sur la page d'accueil)"}
+                    </Text>
+                    <Text fontSize="2xs" color="ink.500">
+                      {isPublicTrack
+                        ? "Ce morceau sera partagé dans la vitrine publique du site"
+                        : "Ce morceau reste privé dans votre bibliothèque personnelle"}
+                    </Text>
+                  </Box>
+                </HStack>
+                <Badge
+                  size="sm"
+                  colorPalette={isPublicTrack ? "green" : "gray"}
+                  variant={isPublicTrack ? "solid" : "subtle"}
+                  rounded="full"
+                  px="2.5"
+                >
+                  {isPublicTrack ? "Public" : "Privé"}
+                </Badge>
+              </Flex>
+
               {/* Bloc de coût en Notes */}
               <HStack justify="center" gap="2" p="3" rounded="2xl" bg="brand.violetTint" borderWidth="1.5px" borderColor="rgba(124, 58, 237, 0.3)" w="full">
                 <Text fontFamily="ui" fontWeight="700" fontSize="xs" color="brand.violetDeep">
@@ -1773,21 +1825,56 @@ export default function GeneratorPanel({
               >
                 {/* En-tête du lecteur */}
                 <Flex justify="space-between" align="center" mb="4">
-                  <Badge px="2.5" py="1" rounded="full" bg="brand.violetTint" color="brand.violetDeep" fontSize="2xs" fontWeight="700">
-                    ✨ Morceau créé avec succès
-                  </Badge>
-                  <IconButton
-                    size="xs"
-                    variant="ghost"
-                    rounded="full"
-                    color={generatedTrack.isFavorite ? "red.500" : "ink.400"}
-                    onClick={() => {
-                      if (onToggleFavorite) onToggleFavorite(generatedTrack.id);
-                    }}
-                    aria-label="Favori"
-                  >
-                    <LuHeart size={16} fill={generatedTrack.isFavorite ? "currentColor" : "none"} />
-                  </IconButton>
+                  <HStack gap="2">
+                    <Badge px="2.5" py="1" rounded="full" bg="brand.violetTint" color="brand.violetDeep" fontSize="2xs" fontWeight="700">
+                      ✨ Morceau créé avec succès
+                    </Badge>
+                    {generatedTrack.isPublic ? (
+                      <Badge px="2" py="0.5" rounded="full" colorPalette="green" variant="subtle" fontSize="2xs">
+                        🌐 Public
+                      </Badge>
+                    ) : (
+                      <Badge px="2" py="0.5" rounded="full" colorPalette="gray" variant="subtle" fontSize="2xs">
+                        🔒 Privé
+                      </Badge>
+                    )}
+                  </HStack>
+                  <HStack gap="1">
+                    {onTogglePublic && generatedTrack?.id && (
+                      <IconButton
+                        size="xs"
+                        variant="ghost"
+                        rounded="full"
+                        color={generatedTrack.isPublic ? "green.600" : "ink.400"}
+                        _hover={{ color: generatedTrack.isPublic ? "red.500" : "green.600" }}
+                        onClick={() => {
+                          onTogglePublic(generatedTrack.id);
+                          setGeneratedTrack((prev) => prev ? { ...prev, isPublic: !prev.isPublic } : null);
+                        }}
+                        title={
+                          generatedTrack.isPublic
+                            ? "Public : Visible sur l'accueil (cliquer pour masquer)"
+                            : "Privé : Masqué de l'accueil (cliquer pour publier)"
+                        }
+                        aria-label="Visibilité"
+                      >
+                        {generatedTrack.isPublic ? <LuGlobe size={15} /> : <LuLock size={15} />}
+                      </IconButton>
+                    )}
+                    <IconButton
+                      size="xs"
+                      variant="ghost"
+                      rounded="full"
+                      color={generatedTrack.isFavorite ? "red.500" : "ink.400"}
+                      onClick={() => {
+                        if (onToggleFavorite) onToggleFavorite(generatedTrack.id);
+                        setGeneratedTrack((prev) => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
+                      }}
+                      aria-label="Favori"
+                    >
+                      <LuHeart size={16} fill={generatedTrack.isFavorite ? "currentColor" : "none"} />
+                    </IconButton>
+                  </HStack>
                 </Flex>
 
                 {/* Pochette de l'album généré */}

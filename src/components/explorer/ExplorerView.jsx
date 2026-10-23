@@ -778,7 +778,7 @@ export default function ExplorerView() {
               borderColor="rgba(255, 255, 255, 0.08)"
             >
               <Text fontSize="2xs">🎧</Text>
-              <Text fontWeight="600">{currentTrack.listens.toLocaleString()} écoutes</Text>
+              <Text fontWeight="600">{currentTrack?.listens?.toLocaleString()} écoutes</Text>
             </HStack>
 
             {/* Pochette d'Album (Dimensions dynamiques avec min/clamp pour s'adapter à toutes les hauteurs d'écran) */}

@@ -1,9 +1,34 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
+
+// Détection de l'environnement si non chargé par le shell
+if (!process.env.NODE_ENV) {
+  try {
+    const envPath = path.join(__dirname, "..", ".env");
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, "utf-8");
+      const match = envContent.match(/^\s*NODE_ENV\s*=\s*["']?([^"'\r\n]+)["']?/m);
+      if (match) process.env.NODE_ENV = match[1].trim();
+    }
+  } catch (_) {}
+}
+
+// Sécurité critique : interdire catégoriquement le seed en production
+if (process.env.NODE_ENV === "production") {
+  console.error("🛑 [Prisma Seed] ERREUR CRITIQUE : Le script de seed est strictement interdit en environnement de production (NODE_ENV=production).");
+  console.error("🛑 Annulation immédiate pour protéger l'intégrité de la base de données.");
+  process.exit(1);
+}
 
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("🛑 [Prisma Seed] Interdit en production.");
+    process.exit(1);
+  }
   console.log("🌱 Début de l'initialisation propre de la base de données melostars...");
 
   // Nettoyage préalable complet pour garantir un état sain
