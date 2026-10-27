@@ -63,7 +63,7 @@ export default function AuthShell({ children, backHref = "/", backLabel = "Retou
             <Text>Connexion chiffrée & sécurisée</Text>
           </HStack>
           <Text>•</Text>
-          <Text>© 2026 melostars</Text>
+          <Text>© 2026 pretymelo</Text>
         </HStack>
       </Box>
     </Box>

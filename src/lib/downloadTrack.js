@@ -7,7 +7,7 @@
 export async function downloadTrackAudio(track) {
   if (!track) return;
 
-  const rawTitle = track.title || "melostars-track";
+  const rawTitle = track.title || "pretymelo-track";
   const cleanTitle =
     rawTitle
       .replace(/[^\w\s\u00C0-\u017F-]/gi, "")

@@ -33,14 +33,14 @@ export default function Step2UsageGoals({ data, onChange }) {
           Votre Usage
         </Heading>
         <Text fontSize={{ base: "sm", md: "md" }} color="ink.500" maxW="xl">
-          Cette étape permet d&apos;adapter l&apos;interface de melostars et de vous proposer la meilleure configuration pour vos créations.
+          Cette étape permet d&apos;adapter l&apos;interface de pretymelo et de vous proposer la meilleure configuration pour vos créations.
         </Text>
       </Stack>
 
-      {/* Section 1 : Objectif principal avec melostars */}
+      {/* Section 1 : Objectif principal avec pretymelo */}
       <Stack gap="3">
         <Text fontFamily="ui" fontWeight="700" fontSize="md" color="ink.900">
-          Quel est votre objectif principal avec melostars ?
+          Quel est votre objectif principal avec pretymelo ?
         </Text>
 
         <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap="3.5">

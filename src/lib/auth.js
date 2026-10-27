@@ -180,7 +180,7 @@ export const authOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "melostars-secret-dev-key-change-in-production",
+  secret: process.env.NEXTAUTH_SECRET || "pretymelo-secret-dev-key-change-in-production",
 };
 
 /**

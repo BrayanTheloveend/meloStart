@@ -57,7 +57,7 @@ const initialConfig = {
 export default function StudioShell({ initialTab = "home" }) {
   const router = useRouter();
   const { data: session } = useSession();
-  const userName = session?.user?.name || "Créateur melostars";
+  const userName = session?.user?.name || "Créateur pretymelo";
   const userImage = session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
 
   const [activeTab, setActiveTab] = useState(initialTab); // "home" | "create" | "library" | "profile" | "voices"
@@ -116,14 +116,15 @@ export default function StudioShell({ initialTab = "home" }) {
   // Charger le solde de Notes et la bibliothèque depuis le localStorage
   useEffect(() => {
     try {
-      const savedNotes = localStorage.getItem("melostars_notes");
+      const savedNotes = localStorage.getItem("pretymelo_notes") || localStorage.getItem("melostars_notes");
       if (savedNotes !== null) {
         setNotes(parseInt(savedNotes, 10));
       } else {
+        localStorage.setItem("pretymelo_notes", "6");
         localStorage.setItem("melostars_notes", "6");
       }
 
-      const savedLibrary = localStorage.getItem("melostars_library");
+      const savedLibrary = localStorage.getItem("pretymelo_library") || localStorage.getItem("melostars_library");
       if (savedLibrary) {
         setLibrary(JSON.parse(savedLibrary));
       }
@@ -137,7 +138,7 @@ export default function StudioShell({ initialTab = "home" }) {
       const urlGenre = searchParams.get("genre");
       const urlPrompt = searchParams.get("prompt");
 
-      const saved = localStorage.getItem("melostars_onboarding");
+      const saved = localStorage.getItem("pretymelo_onboarding") || localStorage.getItem("melostars_onboarding");
       const onboardingData = saved ? JSON.parse(saved) : null;
 
       let appliedGenre = urlGenre;
@@ -177,6 +178,7 @@ export default function StudioShell({ initialTab = "home" }) {
   const updateNotes = (newBalance) => {
     setNotes(newBalance);
     try {
+      localStorage.setItem("pretymelo_notes", String(newBalance));
       localStorage.setItem("melostars_notes", String(newBalance));
     } catch {}
   };
@@ -209,6 +211,7 @@ export default function StudioShell({ initialTab = "home" }) {
       const nextLib = [created, ...library];
       setLibrary(nextLib);
       try {
+        localStorage.setItem("pretymelo_library", JSON.stringify(nextLib));
         localStorage.setItem("melostars_library", JSON.stringify(nextLib));
       } catch {}
 
@@ -227,6 +230,7 @@ export default function StudioShell({ initialTab = "home" }) {
     const updated = library.map((t) => (t.id === trackId ? { ...t, isFavorite: !t.isFavorite } : t));
     setLibrary(updated);
     try {
+      localStorage.setItem("pretymelo_library", JSON.stringify(updated));
       localStorage.setItem("melostars_library", JSON.stringify(updated));
     } catch {}
 
@@ -240,6 +244,7 @@ export default function StudioShell({ initialTab = "home" }) {
     const updated = library.filter((t) => t.id !== trackId);
     setLibrary(updated);
     try {
+      localStorage.setItem("pretymelo_library", JSON.stringify(updated));
       localStorage.setItem("melostars_library", JSON.stringify(updated));
     } catch {}
     if (activePlayerTrack?.id === trackId) {
@@ -280,6 +285,7 @@ export default function StudioShell({ initialTab = "home" }) {
             const nextLib = [createdTrack, ...library];
             setLibrary(nextLib);
             try {
+              localStorage.setItem("pretymelo_library", JSON.stringify(nextLib));
               localStorage.setItem("melostars_library", JSON.stringify(nextLib));
             } catch {}
           }}
@@ -561,6 +567,7 @@ export default function StudioShell({ initialTab = "home" }) {
                   setActivePlayerTrack(newTrack);
                   setIsPlaying(true);
                   try {
+                    localStorage.setItem("pretymelo_library", JSON.stringify(nextLib));
                     localStorage.setItem("melostars_library", JSON.stringify(nextLib));
                   } catch {}
                 }}

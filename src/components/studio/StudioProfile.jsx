@@ -106,8 +106,8 @@ export default function StudioProfile({
 
   // Données utilisateur
   const [profile, setProfile] = useState({
-    name: "Créateur melostars",
-    email: "creator@melostars.com",
+    name: "Créateur pretymelo",
+    email: "creator@pretymelo.com",
     avatar: "🎵",
     image: null,
     tier: "Plan Découverte",
@@ -171,7 +171,7 @@ export default function StudioProfile({
   // Charger profil et préférences depuis localStorage
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem("melostars_user");
+      const storedUser = localStorage.getItem("pretymelo_user") || localStorage.getItem("melostars_user");
       if (storedUser) {
         const u = JSON.parse(storedUser);
         setProfile((prev) => ({
@@ -182,13 +182,13 @@ export default function StudioProfile({
         if (u.name) setNameInput(u.name);
       }
 
-      const storedName = localStorage.getItem("melostars_username");
+      const storedName = localStorage.getItem("pretymelo_username") || localStorage.getItem("melostars_username");
       if (storedName) {
         setProfile((prev) => ({ ...prev, name: storedName }));
         setNameInput(storedName);
       }
 
-      const storedPrefs = localStorage.getItem("melostars_onboarding");
+      const storedPrefs = localStorage.getItem("pretymelo_onboarding") || localStorage.getItem("melostars_onboarding");
       if (storedPrefs) {
         const parsed = JSON.parse(storedPrefs);
         setSavedPreferences({
@@ -205,6 +205,7 @@ export default function StudioProfile({
       const newName = nameInput.trim();
       setProfile((prev) => ({ ...prev, name: newName }));
       try {
+        localStorage.setItem("pretymelo_username", newName);
         localStorage.setItem("melostars_username", newName);
       } catch (_) {}
       setIsEditingName(false);
@@ -487,7 +488,7 @@ export default function StudioProfile({
                 <Text fontSize="xs" fontWeight="700" color="ink.800">
                   {profile.isGoogleLinked || Boolean(profile.image && profile.image.includes("googleusercontent.com"))
                     ? "Compte Google lié"
-                    : "Identifiant Melostars"}
+                    : "Identifiant Pretymelo"}
                 </Text>
               </HStack>
             </Box>
@@ -935,6 +936,8 @@ export default function StudioProfile({
                     _hover={{ bg: "red.50" }}
                     onClick={async () => {
                       try {
+                        localStorage.removeItem("pretymelo_user");
+                        localStorage.removeItem("pretymelo_username");
                         localStorage.removeItem("melostars_user");
                         localStorage.removeItem("melostars_username");
                         sessionStorage.clear();

@@ -1,8 +1,12 @@
 import ExplorerView from "@/components/explorer/ExplorerView";
 
 export const metadata = {
-  title: "Explorer — melostars (Découvrez la musique IA)",
-  description: "Parcourez les morceaux créés par notre communauté en lecture directe avec paroles synchronisées et auto-défilement.",
+  title: "Explorer la Musique IA & Découvrir des Chansons Créées en Ligne",
+  description:
+    "Écoutez les musiques générées par intelligence artificielle sur pretymelo. Rap, Pop, Lo-fi, Rock, Afrobeat avec paroles synchronisées. Inspirez-vous pour créer votre propre chanson gratuite.",
+  alternates: {
+    canonical: "/explorer",
+  },
 };
 
 export default function ExplorerPage() {

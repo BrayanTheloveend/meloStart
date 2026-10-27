@@ -74,7 +74,7 @@ export async function POST(req) {
             amount: initialCredits,
             balanceAfter: initialCredits,
             type: "BONUS",
-            description: "Cadeau de bienvenue melostars (Notes offertes)",
+            description: "Cadeau de bienvenue pretymelo (Notes offertes)",
           },
         });
       }

@@ -80,7 +80,7 @@ export default function RechargeView() {
       setNotes(studio.notes);
     } else {
       try {
-        const stored = localStorage.getItem("melostars_notes");
+        const stored = localStorage.getItem("pretymelo_notes") || localStorage.getItem("melostars_notes");
         if (stored !== null) {
           setNotes(parseInt(stored, 10));
         }
@@ -134,6 +134,7 @@ export default function RechargeView() {
         studio.updateNotes(newTotal);
       } else {
         try {
+          localStorage.setItem("pretymelo_notes", newTotal.toString());
           localStorage.setItem("melostars_notes", newTotal.toString());
         } catch (_) {}
       }

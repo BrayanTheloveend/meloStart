@@ -10,7 +10,7 @@ import { getToken } from "next-auth/jwt";
 export async function middleware(req) {
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET || "melostars-secret-dev-key-change-in-production",
+    secret: process.env.NEXTAUTH_SECRET || "pretymelo-secret-dev-key-change-in-production",
   });
 
   const { pathname, search } = req.nextUrl;

@@ -8,13 +8,13 @@ const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
 export const stripe = new Stripe(stripeSecretKey, {
   apiVersion: "2024-12-18.acacia",
   appInfo: {
-    name: "melostars",
+    name: "pretymelo",
     version: "1.0.0",
   },
 });
 
 /**
- * Configuration des packs de crédits (Notes) melostars.
+ * Configuration des packs de crédits (Notes) pretymelo.
  */
 export const CREDIT_PACKS = {
   decouverte: {
@@ -79,7 +79,7 @@ export async function createCheckoutSession({
           currency: pack.currency || "eur",
           product_data: {
             name: pack.name,
-            description: `Crédite votre compte de ${notes} Notes melostars`,
+            description: `Crédite votre compte de ${notes} Notes pretymelo`,
           },
           unit_amount: pack.amount,
         },

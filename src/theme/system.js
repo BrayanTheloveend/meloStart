@@ -1,7 +1,7 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react";
 
 /**
- * Thème melostars — Chakra UI v3 (thème clair)
+ * Thème pretymelo — Chakra UI v3 (thème clair)
  * Surfaces blanches / gris très clair, texte quasi noir, accents violet / cyan / rose.
  * Polices chargées via next/font dans layout.jsx.
  */

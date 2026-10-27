@@ -1,4 +1,4 @@
-// Configuration et données pour le workflow d'onboarding melostars
+// Configuration et données pour le workflow d'onboarding pretymelo
 
 import { FaBullhorn, FaGoogle, FaNewspaper, FaPlus, FaTiktok, FaUser, FaYoutube } from "react-icons/fa6";
 

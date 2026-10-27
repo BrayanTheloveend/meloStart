@@ -194,7 +194,7 @@ export default function Step4QuickStart({ data, onFinish }) {
                 </Box>
               </HStack>
               <Text fontSize="sm" color="ink.500">
-                Écoutez des titres créés par la communauté melostars pour découvrir la qualité audio et puiser des idées avant de vous lancer.
+                Écoutez des titres créés par la communauté pretymelo pour découvrir la qualité audio et puiser des idées avant de vous lancer.
               </Text>
             </Stack>
 

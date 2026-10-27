@@ -9,8 +9,8 @@ export const navLinks = [
 ];
 
 export const genres = [
-  "Pop", "Rap", "Afrobeat", "Électro", "Lo-fi", "Rock", "R&B", "Jazz", "Reggae", "Soul",
-  "Amapiano", "House", "Folk", "Classique", "Trap", "Disco", "Synthwave", "Gospel", "Reggaeton", "Country",
+  "Pop", "Rap", "Afrobeat", "R&B", "Jazz", "Gospel",
+  "Amapiano"
 ];
 
 export const moods = ["Joyeux", "Mélancolique", "Énergique", "Romantique", "Apaisant", "Épique", "Nostalgique", "Festif"];
@@ -23,17 +23,59 @@ export const durations = [
 ];
 
 export const useCases = [
-  { title: "Anniversaires", text: "Une chanson avec le prénom et les souvenirs de la personne fêtée." },
-  { title: "Mariages", text: "Une musique d'entrée ou une chanson pour les mariés, sur mesure." },
-  { title: "Vidéos et podcasts", text: "Des jingles et des fonds sonores libres de droits pour vos contenus." },
-  { title: "Marques et publicités", text: "Une identité sonore cohérente pour vos spots et vos réseaux." },
-  { title: "Jeux et applications", text: "Des ambiances et boucles musicales adaptées à chaque niveau." },
-  { title: "Baptême", text: "Composez une chanson touchante pour célébrer cet événement." },
+  {
+    title: "Anniversaires",
+    text: "Une chanson festive avec le prénom, les anecdotes et les plus beaux souvenirs de la personne fêtée.",
+    tag: "Célébration",
+    genre: "Pop · Festif",
+    image: "/assets/events/6.jpeg",
+    alt: "Gâteau d'anniversaire avec bougies allumées",
+  },
+  {
+    title: "Mariages",
+    text: "Une musique d'entrée inoubliable ou une déclaration chantée sur mesure pour les mariés.",
+    tag: "Union & Amour",
+    genre: "Ballade · Émotion",
+    image: "/assets/events/5.jpeg",
+    alt: "Couple de mariés souriant lors de la cérémonie",
+  },
+  {
+    title: "Vidéos et podcasts",
+    text: "Des jingles mémorables et des fonds sonores libres de droits pour sublimer vos créations audiovisuelles.",
+    tag: "Créateurs & Médias",
+    genre: "Lo-fi · Groove",
+    image: "/assets/events/2.jpeg",
+    alt: "Microphone de studio et casque audio pour podcast",
+  },
+  {
+    title: "Marques et publicités",
+    text: "Une signature sonore moderne et percutante pour renforcer l'identité de vos spots et réseaux sociaux.",
+    tag: "Business & Ads",
+    genre: "Électro · Percutant",
+    image: "/assets/events/3.jpeg",
+    alt: "Tournage publicitaire et équipe créative",
+  },
+  {
+    title: "Jeux et applications",
+    text: "Des ambiances captivantes et des boucles musicales immersives calibrées pour chaque univers interactif.",
+    tag: "Jeux & Apps",
+    genre: "Synthwave · Épique",
+    image: "/assets/events/1.jpeg",
+    alt: "Setup gaming moderne avec lumières néon",
+  },
+  {
+    title: "Baptême & Famille",
+    text: "Composez une mélodie pleine de tendresse et d'émotion pour marquer les grandes étapes familiales.",
+    tag: "Douceur & Famille",
+    genre: "Acoustique · Douceur",
+    image: "/assets/events/4.jpeg",
+    alt: "Bébé apaisé dans une couverture douce",
+  },
 ];
 
 export const steps = [
   { title: "Décrivez votre idée", text: "Écrivez en quelques lignes l'histoire, l'ambiance ou l'occasion. Choisissez un style et une humeur." },
-  { title: "On compose pour vous", text: "melostars écrit les paroles, crée la mélodie et ajoute la voix. Comptez environ 30 secondes." },
+  { title: "On compose pour vous", text: "pretymelo écrit les paroles, crée la mélodie et ajoute la voix. Comptez environ 30 secondes." },
   { title: "Écoutez et exportez", text: "Réécoutez, relancez une variante, puis téléchargez en MP3 ou WAV." },
 ];
 
@@ -47,7 +89,7 @@ export const stats = [
 export const plans = [
   {
     name: "Découverte",
-    description: "Pour essayer melostars sans carte bancaire.",
+    description: "Pour essayer pretymelo sans carte bancaire.",
     monthly: 0,
     price: 2000,
     yearly: 0,
@@ -106,12 +148,38 @@ export const testimonials = [
 ];
 
 export const faqs = [
-  { q: "Faut-il savoir faire de la musique ?", a: "Non. Vous décrivez ce que vous voulez avec vos mots, melostars s'occupe de la composition, des paroles et de la voix." },
-  { q: "Puis-je utiliser les titres à des fins commerciales ?", a: "Oui, avec les plans Créateur et Studio. Le plan Découverte est réservé à un usage personnel." },
-  { q: "Combien de temps faut-il pour générer un titre ?", a: "En général une trentaine de secondes. Les titres de 3 minutes peuvent prendre un peu plus de temps." },
-  { q: "Puis-je modifier un titre après sa création ?", a: "Vous pouvez relancer une variante, changer l'humeur ou le tempo, et modifier les paroles avant de régénérer." },
-  { q: "Dans quelles langues puis-je écrire les paroles ?", a: "Français, anglais, espagnol, portugais et plusieurs autres langues sont disponibles." },
-  { q: "Puis-je annuler mon abonnement ?", a: "Oui, à tout moment depuis votre compte. Vous gardez l'accès jusqu'à la fin de la période payée." },
+  {
+    q: "Comment générer de la musique avec l'IA sur pretymelo ?",
+    a: "Il vous suffit de décrire votre idée (genre musical, thème, paroles ou émotions) : notre générateur de musique par IA compose la mélodie, écrit les paroles et interprète le morceau avec une voix réaliste en moins de 30 secondes.",
+  },
+  {
+    q: "Peut-on créer une chanson gratuite sans carte bancaire ?",
+    a: "Oui ! pretymelo propose une formule Découverte gratuite sans carte bancaire requise afin de vous permettre de créer votre chanson gratuite et tester notre intelligence artificielle musicale.",
+  },
+  {
+    q: "Faut-il savoir faire de la musique ?",
+    a: "Non, aucune compétence musicale n'est nécessaire. Vous décrivez ce que vous souhaitez avec vos mots, et pretymelo s'occupe de toute la composition, du mixage et du chant.",
+  },
+  {
+    q: "Puis-je utiliser les titres générés à des fins commerciales ?",
+    a: "Oui, avec les plans Créateur et Studio, vous bénéficiez d'une licence commerciale complète pour diffuser vos titres sur YouTube, TikTok, podcasts ou publicités.",
+  },
+  {
+    q: "Combien de temps faut-il pour générer un titre ?",
+    a: "En général une trentaine de secondes suffisent pour obtenir un morceau complet de haute qualité studio.",
+  },
+  {
+    q: "Puis-je modifier un titre après sa création ?",
+    a: "Vous pouvez relancer une variante, changer l'humeur ou le tempo, et modifier les paroles avant de régénérer.",
+  },
+  {
+    q: "Dans quelles langues puis-je créer les paroles ?",
+    a: "Le français, l'anglais, l'espagnol, le portugais et plusieurs autres langues sont parfaitement interprétés par l'IA vocale.",
+  },
+  {
+    q: "Puis-je annuler mon abonnement à tout moment ?",
+    a: "Oui, à tout moment depuis votre compte en un clic. Vous gardez l'accès jusqu'à la fin de la période payée.",
+  },
 ];
 
 export const footerColumns = [

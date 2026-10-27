@@ -34,7 +34,7 @@ export default function StudioHome({
         <Box>
           <HStack gap="2">
             <Text fontFamily="heading" fontWeight="800" fontSize={{ base: "xl", md: "3xl" }} color="ink.900" letterSpacing="-0.03em">
-              Studio melostars
+              Studio pretymelo
             </Text>
             <Badge size="sm" rounded="full" bg="brand.violetTint" color="brand.violetDeep" px="2.5" py="0.5" fontFamily="ui" fontWeight="600">
               v2.0

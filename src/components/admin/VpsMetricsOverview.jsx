@@ -221,7 +221,7 @@ export default function VpsMetricsOverview() {
     }
     setShowRebootModal(false);
     setRebootConfirmationText("");
-    await handleExecuteAction("reboot_vps", { reason: "Redémarrage ordonné par l'administrateur meloStart" });
+    await handleExecuteAction("reboot_vps", { reason: "Redémarrage ordonné par l'administrateur pretymelo" });
   };
 
   // Export des logs en fichier texte
@@ -363,7 +363,7 @@ export default function VpsMetricsOverview() {
           </HStack>
 
           <Text color="ink.500" fontSize="sm">
-            Supervision temps réel, contrôle des ressources hardware, services de la stack meloStart et actions système.
+            Supervision temps réel, contrôle des ressources hardware, services de la stack pretymelo et actions système.
           </Text>
         </Stack>
 
@@ -740,7 +740,7 @@ export default function VpsMetricsOverview() {
               </Text>
             </Flex>
             <Flex justify="space-between" fontSize="11px" color="ink.600">
-              <Text>Processus Next.js meloStart :</Text>
+              <Text>Processus Next.js pretymelo :</Text>
               <Text fontWeight="700">{memory.nodeProcess?.rssMb} Mo RSS</Text>
             </Flex>
 
@@ -1065,7 +1065,7 @@ export default function VpsMetricsOverview() {
       </SimpleGrid>
 
       {/* ========================================================= */}
-      {/* SUPERVISION & CONTRÔLE DES SERVICES meloStart SUR LE VPS */}
+      {/* SUPERVISION & CONTRÔLE DES SERVICES pretymelo SUR LE VPS */}
       {/* ========================================================= */}
       <Box
         p={{ base: "5", lg: "6" }}
@@ -1079,7 +1079,7 @@ export default function VpsMetricsOverview() {
             <HStack gap="2">
               <LuLayers size={18} color="#7c3aed" />
               <Text fontWeight="800" fontSize="base" fontFamily="heading">
-                Stack Logicielle & Services meloStart sur le VPS
+                Stack Logicielle & Services pretymelo sur le VPS
               </Text>
             </HStack>
             <Text fontSize="xs" color="ink.500">
@@ -1424,7 +1424,7 @@ export default function VpsMetricsOverview() {
                 Console des Logs Système & Événements Serveur
               </Text>
               <Text fontSize="xs" color="ink.500">
-                Flux en direct de l'activité du serveur Hostinger et des daemons meloStart.
+                Flux en direct de l'activité du serveur Hostinger et des daemons pretymelo.
               </Text>
             </Stack>
           </HStack>

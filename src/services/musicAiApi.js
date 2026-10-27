@@ -35,7 +35,7 @@ export const GENERATION_STAGES = [
 ];
 
 /**
- * Lance la génération d'un morceau via l'API backend melostars et suit son avancement en direct.
+ * Lance la génération d'un morceau via l'API backend pretymelo et suit son avancement en direct.
  * Compatible avec le formulaire par étapes (Wizard) et le mode Suno direct.
  *
  * @param {Object} params Paramètres de composition

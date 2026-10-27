@@ -62,7 +62,7 @@ const fmt = (s) => {
   return `${m}:${sec}`;
 };
 
-// 1. Étape 1 : Types d'occasions (visuels officiels melostars)
+// 1. Étape 1 : Types d'occasions (visuels officiels pretymelo)
 const OCCASIONS = [
   { id: "birthday", title: "Anniversaire", icon: "/assets/1.png", sample: "Une chanson festive et entraînante pour les 30 ans de Fatou, elle adore danser et est toujours souriante." },
   { id: "wedding", title: "Mariage", icon: "/assets/2.png", sample: "Une ouverture de bal douce et romantique pour célébrer notre amour devant toute la famille." },
@@ -586,7 +586,7 @@ export default function GeneratorPanel({
                   alt={session?.user?.name || "Profil utilisateur"}
                   referrerPolicy="no-referrer"
                 />
-                <Avatar.Fallback name={session?.user?.name || "Créateur melostars"} />
+                <Avatar.Fallback name={session?.user?.name || "Créateur pretymelo"} />
               </Avatar.Root>
             </Box>
           </HStack>
@@ -1560,7 +1560,7 @@ export default function GeneratorPanel({
                   <Box pt="1">
                     <Text fontSize="2xs" color="ink.400" mb="1">Votre histoire :</Text>
                     <Text fontSize="xs" color="ink.700" fontStyle="italic" noOfLines={3}>
-                      « {story || "Création musicale sur mesure melostars"} »
+                      « {story || "Création musicale sur mesure pretymelo"} »
                     </Text>
                   </Box>
 
@@ -1720,7 +1720,7 @@ export default function GeneratorPanel({
 
               <Stack gap="1.5">
                 <Text fontFamily="heading" fontWeight="900" fontSize="2xl" color="ink.900">
-                  melostars compose votre titre...
+                  pretymelo compose votre titre...
                 </Text>
                 <Text fontSize="xs" color="ink.500">
                   {stepLabel}

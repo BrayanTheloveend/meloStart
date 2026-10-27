@@ -112,6 +112,8 @@ export default function AdminDashboardLayout({ children }) {
 
   const handleSignOut = async () => {
     try {
+      localStorage.removeItem("pretymelo_user");
+      localStorage.removeItem("pretymelo_username");
       localStorage.removeItem("melostars_user");
       localStorage.removeItem("melostars_username");
       sessionStorage.clear();
@@ -141,7 +143,7 @@ export default function AdminDashboardLayout({ children }) {
   }
 
   const adminName = session?.user?.name || "Administrateur";
-  const adminEmail = session?.user?.email || "admin@melostars.com";
+  const adminEmail = session?.user?.email || "admin@pretymelo.com";
 
   return (
     <Box minH="100dvh" bg="paper.50" color="ink.900" display="flex" position="relative">
@@ -175,7 +177,7 @@ export default function AdminDashboardLayout({ children }) {
               <Logo />
             </Box>
             <Box display={{ base: "block", lg: "none" }}>
-              <Image src="/assets/logo.png" alt="melostars" width={'35px'} height={'35px'} />
+              <Image src="/assets/logo.png" alt="pretymelo" width={'35px'} height={'35px'} />
             </Box>
 
             <Badge

@@ -358,7 +358,7 @@ export default function AdminSystemPage() {
       {/* ========================================================= */}
       <Box>
         <Text fontFamily="heading" fontWeight="700" fontSize="lg" mb="4" color="ink.900">
-          Services de l'Infrastructure melostars
+          Services de l'Infrastructure pretymelo
         </Text>
 
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap="4">

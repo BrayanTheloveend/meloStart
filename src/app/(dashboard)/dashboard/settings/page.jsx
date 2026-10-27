@@ -147,7 +147,7 @@ export default function AdminSettingsPage() {
             <LuZap size={18} />
           </Box>
           <Text fontFamily="heading" fontWeight="700" fontSize="lg">
-            Règles Économiques des Notes melostars
+            Règles Économiques des Notes pretymelo
           </Text>
         </HStack>
 

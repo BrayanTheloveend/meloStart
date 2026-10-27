@@ -1,5 +1,5 @@
 /**
- * Données administratives et modèles de données pour la console Admin melostars.
+ * Données administratives et modèles de données pour la console Admin pretymelo.
  */
 
 export const ADMIN_STATS = {
@@ -31,7 +31,7 @@ export const INITIAL_USERS = [
   {
     id: "usr_01",
     name: "Brayan Nkouka",
-    email: "brayan@melostars.com",
+    email: "brayan@pretymelo.com",
     role: "ADMIN",
     credits: 140,
     totalTracks: 42,
@@ -150,7 +150,7 @@ export const INITIAL_TRACKS = [
     vocalType: "male",
     duration: 60,
     status: "COMPLETED",
-    user: { name: "Brayan Nkouka", email: "brayan@melostars.com" },
+    user: { name: "Brayan Nkouka", email: "brayan@pretymelo.com" },
     audioUrl: "https://actions.google.com/sounds/v1/ambiences/coffee_shop.ogg",
     s3Key: "users/usr_01/tracks/trk_103/master.mp3",
     progress: 100,
@@ -269,7 +269,7 @@ export const SYSTEM_SERVICES = [
     id: "storage",
     name: "Stockage AWS S3 / Cloudflare R2",
     status: "ONLINE",
-    bucket: "melostars-storage",
+    bucket: "pretymelo-storage",
     assets: "4 912 audios & covers",
     details: "Distribution CDN ultra-rapide active.",
   },
@@ -285,7 +285,7 @@ export const SYSTEM_SERVICES = [
     id: "ai_engine",
     name: "Moteur IA Musical (Pipeline Audio)",
     status: "ONLINE",
-    engine: "melostars Neural Core v2",
+    engine: "pretymelo Neural Core v2",
     avgGenerationTime: "26.4s",
     details: "Modèles d'arrangement, de voix et de mastering opérationnels.",
   },

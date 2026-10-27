@@ -1,4 +1,4 @@
-// Prisma schema for melostars
+// Prisma schema for pretymelo
 // Documentation: https://pris.ly/d/prisma-schema
 
 generator client {

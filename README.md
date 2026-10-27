@@ -1,4 +1,4 @@
-# 🎵 melostars - Plateforme de Génération Musicale par IA
+# 🎵 pretymelo - Plateforme de Génération Musicale par IA
 
 Plateforme SaaS de composition et génération de morceaux musicaux par IA (modèles Suno V6), combinant une interface studio réactive, un système de paiement par Notes (Stripe), une supervision complète de VPS Hostinger et une architecture de traitement distribuée avec **Redis** et **BullMQ** (100% gratuits et open-source).
 

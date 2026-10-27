@@ -33,13 +33,13 @@ export default function Step3Attribution({ data, onChange }) {
           Comment nous avez-vous découverts ?
         </Heading>
         <Text fontSize={{ base: "sm", md: "md" }} color="ink.500" maxW="xl">
-          Ces retours nous aident à comprendre comment melostars se fait connaître et à concentrer nos efforts au bon endroit.
+          Ces retours nous aident à comprendre comment pretymelo se fait connaître et à concentrer nos efforts au bon endroit.
         </Text>
       </Stack>
 
       <Stack gap="3">
         <Text fontFamily="ui" fontWeight="700" fontSize="md" color="ink.900">
-          Comment avez-vous entendu parler de melostars ?
+          Comment avez-vous entendu parler de pretymelo ?
         </Text>
 
         <Grid templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap="3">

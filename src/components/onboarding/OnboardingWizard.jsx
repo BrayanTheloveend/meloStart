@@ -13,7 +13,7 @@ import Step3Attribution from "./Step3Attribution";
 import Step4QuickStart from "./Step4QuickStart";
 import { accent } from "@/theme/system";
 
-const STORAGE_KEY = "melostars_onboarding";
+const STORAGE_KEY = "pretymelo_onboarding";
 
 const defaultData = {
   genres: ["pop_variete"],

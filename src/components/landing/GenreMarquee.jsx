@@ -80,7 +80,7 @@ export default function GenreMarquee() {
 
       <Box position="relative" h={{ base: "150px", md: "190px" }}>
         <Band
-          items={genres.slice(0, half)}
+          items={genres}
           duration={45}
           rotate={-2}
           top={{ base: "10px", md: "14px" }}
@@ -90,7 +90,7 @@ export default function GenreMarquee() {
           zIndex="1"
         />
         <Band
-          items={genres.slice(half)}
+          items={genres}
           reverse
           duration={52}
           rotate={2}

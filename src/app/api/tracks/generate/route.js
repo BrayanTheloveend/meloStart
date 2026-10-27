@@ -114,7 +114,7 @@ export async function POST(req) {
       const words = prompt.trim().split(/\s+/).slice(0, 5).join(" ");
       derivedTitle = words.charAt(0).toUpperCase() + words.slice(1);
     } else if (style?.trim()) {
-      derivedTitle = `${style.trim().split(",")[0]} Melostars`;
+      derivedTitle = `${style.trim().split(",")[0]} Pretymelo`;
     } else {
       derivedTitle = "Nouvelle Création IA";
     }

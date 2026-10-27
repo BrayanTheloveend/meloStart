@@ -146,7 +146,7 @@ export default function AdminDashboardPage() {
             </Badge>
           </HStack>
           <Text color="ink.500" fontSize="sm">
-            Vue consolidée des performances, des utilisateurs et du pipeline audio melostars.
+            Vue consolidée des performances, des utilisateurs et du pipeline audio pretymelo.
           </Text>
         </Stack>
 
@@ -411,7 +411,7 @@ export default function AdminDashboardPage() {
                 : [
                     { id: "bullmq", name: "File d'attente BullMQ & Redis", status: "ONLINE", details: "File 'music-generation' (Port 6379)" },
                     { id: "suno", name: "Suno AI API (sunoapi.org)", status: "ONLINE", details: "Modèle Suno V6 Master HD" },
-                    { id: "pg", name: "Base PostgreSQL & Prisma", status: "ONLINE", details: "Données persistantes melostars" },
+                    { id: "pg", name: "Base PostgreSQL & Prisma", status: "ONLINE", details: "Données persistantes pretymelo" },
                   ]
               ).map((s) => (
                 <Box

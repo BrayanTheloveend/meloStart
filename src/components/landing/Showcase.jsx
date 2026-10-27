@@ -208,14 +208,7 @@ export default function Showcase() {
             {/* --- COLONNE GAUCHE : Textes, Sélection de pistes & CTA --- */}
             <Stack gap="6" gridColumn={{ lg: "span 6" }} align="flex-start">
               <Stack gap="3">
-                <HStack gap="2">
-                  <Badge colorPalette="purple" rounded="full" px="3" py="0.5" fontSize="xs">
-                    🌟 Créations en direct
-                  </Badge>
-                  <Text fontSize="xs" color="ink.400" fontWeight="600">
-                    Testées & Approuvées
-                  </Text>
-                </HStack>
+                
 
                 <Heading
                   as="h2"
@@ -227,7 +220,7 @@ export default function Showcase() {
                 >
                   Ils ont créé ça avec <br />
                   <Text as="span" color="brand.violet">
-                    melostars
+                    pretymelo
                   </Text>
                 </Heading>
                 <Text color="ink.500" fontSize="lg" maxW="md">
@@ -245,7 +238,7 @@ export default function Showcase() {
                 color="ink.400"
                 mt="2"
               >
-                {tracks.length} morceau{tracks.length > 1 ? "x" : ""} à écouter
+                {tracks.length} morceau{tracks.length > 1 ? "x" : ""}  {tracks.length} histoires, {tracks.length} émotions
               </Text>
 
               {/* Liste interactives des morceaux */}
@@ -369,7 +362,7 @@ export default function Showcase() {
             </Stack>
 
             {/* --- COLONNE DROITE : Player Principal Grand Format --- */}
-            <Box gridColumn={{ lg: "span 6" }}>
+            <Box  gridColumn={{ lg: "span 6" }}>
               <Box
                 p={{ base: "6", md: "8" }}
                 rounded="3xl"

@@ -4,7 +4,7 @@ export const DEFAULT_PRICING_PLANS = [
   {
     id: "pack_decouverte",
     name: "Pack Découverte",
-    description: "Pour essayer melostars sans engagement et créer vos premières musiques.",
+    description: "Pour essayer pretymelo sans engagement et créer vos premières musiques.",
     price: 2000,
     currency: "XAF",
     notes: 4,
@@ -128,12 +128,12 @@ export async function savePricingPlansToDb(plans) {
     where: { key: PRICING_SETTING_KEY },
     update: {
       value: JSON.stringify(normalized),
-      description: "Plans de tarification et packs de notes melostars (CRUD Admin)",
+      description: "Plans de tarification et packs de notes pretymelo (CRUD Admin)",
     },
     create: {
       key: PRICING_SETTING_KEY,
       value: JSON.stringify(normalized),
-      description: "Plans de tarification et packs de notes melostars (CRUD Admin)",
+      description: "Plans de tarification et packs de notes pretymelo (CRUD Admin)",
     },
   });
 

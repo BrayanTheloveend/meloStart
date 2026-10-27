@@ -58,6 +58,8 @@ function StudioLayoutContent({ children }) {
 
   const handleSignOut = async () => {
     try {
+      localStorage.removeItem("pretymelo_user");
+      localStorage.removeItem("pretymelo_username");
       localStorage.removeItem("melostars_user");
       localStorage.removeItem("melostars_username");
       sessionStorage.clear();
@@ -86,7 +88,7 @@ function StudioLayoutContent({ children }) {
 
   const isCreationWorkflow = pathname.startsWith("/studio/create") || pathname.startsWith("/studio/creer");
   const isRechargeWorkflow = pathname === "/studio/recharge";
-  const userName = session?.user?.name || "Créateur melostars";
+  const userName = session?.user?.name || "Créateur pretymelo";
   const userImage = session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
 
   // Masquer la sidebar web et la navigation mobile sur le workflow de création pour une concentration totale
@@ -133,7 +135,7 @@ function StudioLayoutContent({ children }) {
         zIndex="30"
         overflow="hidden"
       >
-        {/* En-tête : Logo melostars */}
+        {/* En-tête : Logo pretymelo */}
         <Box px="6" pt="6" pb="5" borderBottomWidth="1px" borderColor="paper.200" flexShrink={0}>
           <Logo />
         </Box>

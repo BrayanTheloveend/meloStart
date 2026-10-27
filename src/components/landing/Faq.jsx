@@ -7,8 +7,25 @@ import { faqs } from "@/data/content";
 
 /** FAQ : Accordion Chakra UI v3 (Accordion.Root / Item / ItemTrigger / ItemContent). */
 export default function Faq() {
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: f.a,
+      },
+    })),
+  };
+
   return (
     <Box as="section" id="faq" pb={{ base: "20", md: "28" }} scrollMarginTop="80px">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <Container maxW="3xl">
         <Reveal>
           <SectionHead pill="FAQ" title="Questions fréquentes" />

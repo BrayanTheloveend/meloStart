@@ -60,7 +60,7 @@ export default function Header() {
 
   const isAuthenticated = status === "authenticated" && Boolean(session?.user);
   const user = session?.user;
-  const userName = user?.name || "Créateur melostars";
+  const userName = user?.name || "Créateur pretymelo";
   const userEmail = user?.email || "";
   const userImage = user?.image;
   const isGoogle = Boolean(userImage && userImage.includes("googleusercontent.com"));
@@ -287,6 +287,8 @@ export default function Header() {
                           onClick={() => {
                             setUserMenuOpen(false);
                             try {
+                              localStorage.removeItem("pretymelo_user");
+                              localStorage.removeItem("pretymelo_username");
                               localStorage.removeItem("melostars_user");
                               localStorage.removeItem("melostars_username");
                               sessionStorage.clear();
@@ -408,6 +410,8 @@ export default function Header() {
                   onClick={() => {
                     setOpen(false);
                     try {
+                      localStorage.removeItem("pretymelo_user");
+                      localStorage.removeItem("pretymelo_username");
                       localStorage.removeItem("melostars_user");
                       localStorage.removeItem("melostars_username");
                       sessionStorage.clear();

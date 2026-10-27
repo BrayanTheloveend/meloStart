@@ -11,7 +11,7 @@ export default function Testimonials() {
     <Box as="section" pb={{ base: "20", md: "28" }}>
       <Container maxW="7xl">
         <Reveal>
-          <SectionHead pill="Avis" title="Ils créent déjà avec melostars" />
+          <SectionHead pill="Avis" title="Ils créent déjà avec pretymelo" />
         </Reveal>
         <SimpleGrid mt="12" columns={{ base: 1, md: 3 }} gap="5">
           {testimonials.map((t) => (

@@ -39,15 +39,28 @@ export function StudioProvider({ children }) {
     setCurrentTime(targetTime);
   };
 
+const saveNotesToStorage = (val) => {
+  try {
+    localStorage.setItem("pretymelo_notes", String(val));
+    localStorage.setItem("melostars_notes", String(val));
+  } catch (_) {}
+};
+
+const saveLibraryToStorage = (val) => {
+  try {
+    const json = JSON.stringify(val);
+    localStorage.setItem("pretymelo_library", json);
+    localStorage.setItem("melostars_library", json);
+  } catch (_) {}
+};
+
   // Fonction de resynchronisation des crédits
   const refreshUserCredits = async () => {
     try {
       const res = await api.get("/api/user/credits");
       if (res?.credits !== undefined) {
         setNotes(res.credits);
-        try {
-          localStorage.setItem("melostars_notes", String(res.credits));
-        } catch (_) {}
+        saveNotesToStorage(res.credits);
       }
     } catch (_) {}
   };
@@ -56,12 +69,12 @@ export function StudioProvider({ children }) {
   useEffect(() => {
     // 1. Initialisation locale rapide
     try {
-      const savedNotes = localStorage.getItem("melostars_notes");
+      const savedNotes = localStorage.getItem("pretymelo_notes") || localStorage.getItem("melostars_notes");
       if (savedNotes !== null) {
         setNotes(parseInt(savedNotes, 10));
       }
 
-      const savedLibrary = localStorage.getItem("melostars_library");
+      const savedLibrary = localStorage.getItem("pretymelo_library") || localStorage.getItem("melostars_library");
       if (savedLibrary) {
         setLibrary(JSON.parse(savedLibrary));
       }
@@ -75,16 +88,12 @@ export function StudioProvider({ children }) {
       .then(([creditsRes, tracksRes]) => {
         if (creditsRes?.credits !== undefined) {
           setNotes(creditsRes.credits);
-          try {
-            localStorage.setItem("melostars_notes", String(creditsRes.credits));
-          } catch (_) {}
+          saveNotesToStorage(creditsRes.credits);
         }
 
         if (tracksRes?.data) {
           setLibrary(tracksRes.data);
-          try {
-            localStorage.setItem("melostars_library", JSON.stringify(tracksRes.data));
-          } catch (_) {}
+          saveLibraryToStorage(tracksRes.data);
         }
       })
       .finally(() => {
@@ -94,9 +103,7 @@ export function StudioProvider({ children }) {
 
   const updateNotes = (newBalance) => {
     setNotes(newBalance);
-    try {
-      localStorage.setItem("melostars_notes", String(newBalance));
-    } catch (_) {}
+    saveNotesToStorage(newBalance);
   };
 
   const addNotes = (amount) => {
@@ -108,9 +115,7 @@ export function StudioProvider({ children }) {
     setLibrary(updated);
     setActivePlayerTrack(newTrack);
     setIsPlaying(true);
-    try {
-      localStorage.setItem("melostars_library", JSON.stringify(updated));
-    } catch (_) {}
+    saveLibraryToStorage(updated);
     refreshUserCredits();
   };
 
@@ -145,9 +150,7 @@ export function StudioProvider({ children }) {
     // Mise à jour optimiste de la bibliothèque locale
     const updated = library.map((t) => (t.id === trackId ? { ...t, isPublic: newPublicState } : t));
     setLibrary(updated);
-    try {
-      localStorage.setItem("melostars_library", JSON.stringify(updated));
-    } catch (_) {}
+    saveLibraryToStorage(updated);
 
     if (activePlayerTrack?.id === trackId) {
       setActivePlayerTrack((prev) => (prev ? { ...prev, isPublic: newPublicState } : null));
@@ -165,9 +168,7 @@ export function StudioProvider({ children }) {
     // Mise à jour optimiste
     const updated = library.filter((t) => t.id !== trackId);
     setLibrary(updated);
-    try {
-      localStorage.setItem("melostars_library", JSON.stringify(updated));
-    } catch (_) {}
+    saveLibraryToStorage(updated);
 
     if (activePlayerTrack?.id === trackId) {
       setActivePlayerTrack(null);
@@ -209,9 +210,7 @@ export function StudioProvider({ children }) {
       const res = await api.get("/api/tracks");
       if (res?.data) {
         setLibrary(res.data);
-        try {
-          localStorage.setItem("melostars_library", JSON.stringify(res.data));
-        } catch (_) {}
+        saveLibraryToStorage(res.data);
       }
     } catch (_) {}
   };

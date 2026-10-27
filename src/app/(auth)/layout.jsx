@@ -1,8 +1,8 @@
 import AuthShell from "@/components/auth/AuthShell";
 
 export const metadata = {
-  title: "Authentification | melostars",
-  description: "Connectez-vous ou créez votre compte melostars pour générer des morceaux uniques par IA.",
+  title: "Authentification | pretymelo",
+  description: "Connectez-vous ou créez votre compte pretymelo pour générer des morceaux uniques par IA.",
 };
 
 export default function AuthLayout({ children }) {

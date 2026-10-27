@@ -248,7 +248,7 @@ export default function ExplorerView() {
           title: t.title,
           subtitle: t.prompt || `${t.genre || "Afrobeat"} composé par IA`,
           genre: t.genre || "Afrobeat",
-          creator: t.user?.name || "Artiste melostars",
+          creator: t.user?.name || "Artiste pretymelo",
           duration: t.duration || 120,
           cover: t.coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&fit=crop",
           audioUrl: t.audioUrl || null,
@@ -262,7 +262,7 @@ export default function ExplorerView() {
                 text: line,
               }))
             : [
-                { id: 1, time: 0, text: "♪ Mélodie composée par IA melostars ♪" },
+                { id: 1, time: 0, text: "♪ Mélodie composée par IA pretymelo ♪" },
                 { id: 2, time: 6, text: t.prompt || "Harmonies vocales et rythmes captivants" },
               ],
         }));
@@ -1251,7 +1251,7 @@ export default function ExplorerView() {
               color="rgba(255, 255, 255, 0.4)"
               fontFamily="ui"
             >
-              <Text>Karaoké IA melostars</Text>
+              <Text>Karaoké IA pretymelo</Text>
               <Text>Cliquez sur une phrase pour avancer</Text>
             </Flex>
           </Box>

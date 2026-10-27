@@ -94,7 +94,7 @@ function getMemoryStats() {
   const swapFreeGb = parseFloat((swapTotalGb - swapUsedGb).toFixed(2));
   const swapPercent = Math.round((swapUsedGb / swapTotalGb) * 100);
 
-  // Mémoire consommée par le processus Node.js meloStart
+  // Mémoire consommée par le processus Node.js pretymelo
   const procMem = process.memoryUsage();
   const nodeHeapUsedMb = Math.round(procMem.heapUsed / (1024 * 1024));
   const nodeRssMb = Math.round(procMem.rss / (1024 * 1024));
@@ -265,7 +265,7 @@ async function getHostingerConfig() {
 }
 
 /**
- * Diagnostic de l'ensemble des services système meloStart qui tournent sur le VPS.
+ * Diagnostic de l'ensemble des services système pretymelo qui tournent sur le VPS.
  */
 async function getVpsServicesHealth() {
   // 1. Next.js Web App
@@ -430,7 +430,7 @@ function getTopProcesses() {
   return [
     {
       pid: process.pid,
-      name: "node (meloStart next-server)",
+      name: "node (pretymelo next-server)",
       user: "www-data",
       cpuPercent: 3.2,
       memPercent: 4.8,
@@ -546,7 +546,7 @@ async function getRecentVpsLogs() {
       timestamp: new Date(now - 1000 * 320).toISOString(),
       service: "NGINX_SSL",
       level: "INFO",
-      message: "Handshake TLS 1.3 réussi pour le domaine principal melostars.",
+      message: "Handshake TLS 1.3 réussi pour le domaine principal pretymelo.",
     },
     {
       id: "ev-6",
@@ -595,7 +595,7 @@ export async function getCompleteVpsMetrics() {
   return {
     success: true,
     server: {
-      hostname: os.hostname() || "vps-hostinger-melostars",
+      hostname: os.hostname() || "vps-hostinger-pretymelo",
       os: `${os.type()} ${os.release()} (${os.arch()})`,
       platform: os.platform(),
       distro: "Ubuntu 22.04.4 LTS (GNU/Linux x86_64)",

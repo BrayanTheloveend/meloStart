@@ -2,13 +2,17 @@ import AuthShell from "@/components/auth/AuthShell";
 import SignupForm from "@/components/auth/SignupForm";
 
 export const metadata = {
-  title: "Inscription rapide | melostars",
-  description: "Créez votre compte melostars en 10 secondes et commencez à composer de la musique par IA.",
+  title: "Créer une Chanson Gratuite — Inscription Rapide",
+  description:
+    "Inscrivez-vous gratuitement sur pretymelo et commencez à générer de la musique avec l'IA immédiatement, sans carte bancaire requise.",
+  alternates: {
+    canonical: "/inscription",
+  },
 };
 
 export default function SignupPage() {
   return (
-    <AuthShell backHref="/" backLabel="Accueil melostars">
+    <AuthShell backHref="/" backLabel="Accueil pretymelo">
       <SignupForm />
     </AuthShell>
   );

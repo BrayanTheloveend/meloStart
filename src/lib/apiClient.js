@@ -1,5 +1,5 @@
 /**
- * Client API universel pour le frontend melostars.
+ * Client API universel pour le frontend pretymelo.
  * Gère les requêtes HTTP, le parsing JSON, les erreurs et les fallbacks.
  */
 

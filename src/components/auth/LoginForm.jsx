@@ -55,7 +55,7 @@ export default function LoginForm() {
     try {
       if (session?.user) {
         localStorage.setItem(
-          "melostars_user",
+          "pretymelo_user",
           JSON.stringify({
             email: session.user.email,
             name: session.user.name,
@@ -115,7 +115,7 @@ export default function LoginForm() {
       // Persistance de confort pour la session client
       try {
         localStorage.setItem(
-          "melostars_user",
+          "pretymelo_user",
           JSON.stringify({
             email: cleanEmail,
             name: session?.user?.name || cleanEmail.split("@")[0],
@@ -194,7 +194,7 @@ export default function LoginForm() {
                 fontSize="2xs"
                 fontWeight="700"
               >
-                melostars Studio
+                pretymelo Studio
               </Badge>
             </HStack>
             <Text

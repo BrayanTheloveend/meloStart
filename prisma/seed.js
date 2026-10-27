@@ -29,7 +29,7 @@ async function main() {
     console.error("🛑 [Prisma Seed] Interdit en production.");
     process.exit(1);
   }
-  console.log("🌱 Début de l'initialisation propre de la base de données melostars...");
+  console.log("🌱 Début de l'initialisation propre de la base de données pretymelo...");
 
   // Nettoyage préalable complet pour garantir un état sain
   await prisma.creditTransaction.deleteMany();
@@ -45,8 +45,8 @@ async function main() {
   // 1. Création du compte Administrateur
   const admin = await prisma.user.create({
     data: {
-      name: "Admin melostars",
-      email: "admin@melostars.com",
+      name: "Admin pretymelo",
+      email: "admin@pretymelo.com",
       passwordHash: hashedPassword,
       role: "ADMIN",
       status: "ACTIVE",
@@ -55,22 +55,80 @@ async function main() {
     },
   });
 
-  // 2. Création du compte Utilisateur Test
-  const testUser = await prisma.user.create({
-    data: {
-      name: "Utilisateur Test",
-      email: "test@melostars.com",
-      passwordHash: hashedPassword,
-      role: "USER",
-      status: "ACTIVE",
-      credits: 20,
-      image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop",
+  // 2. Création de comptes Créateurs de test avec avatars réalistes
+  const sampleUsers = [
+    {
+      name: "Camille Laurent",
+      email: "camille@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
     },
-  });
+    {
+      name: "Idriss Diop",
+      email: "idriss@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
+    },
+    {
+      name: "Sofia Benali",
+      email: "sofia@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+    },
+    {
+      name: "Marc Dubois",
+      email: "marc@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
+    },
+    {
+      name: "Thomas Morel",
+      email: "thomas@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&h=150&fit=crop",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+    },
+    {
+      name: "Clara Martin",
+      email: "clara@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1),
+    },
+    {
+      name: "Alex Rivera",
+      email: "alex@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&h=150&fit=crop",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
+    },
+    {
+      name: "Utilisateur Test",
+      email: "test@pretymelo.com",
+      image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop",
+      createdAt: new Date(),
+    },
+  ];
 
-  console.log("✅ 2 utilisateurs créés :");
-  console.log("   - Administrateur : admin@melostars.com (mot de passe: password123)");
-  console.log("   - Utilisateur    : test@melostars.com  (mot de passe: password123)");
+  const createdUsers = [];
+  for (const u of sampleUsers) {
+    const created = await prisma.user.create({
+      data: {
+        name: u.name,
+        email: u.email,
+        passwordHash: hashedPassword,
+        role: "USER",
+        status: "ACTIVE",
+        credits: 20,
+        image: u.image,
+        createdAt: u.createdAt,
+      },
+    });
+    createdUsers.push(created);
+  }
+
+  const testUser = createdUsers[createdUsers.length - 1];
+
+  console.log(`✅ ${createdUsers.length + 1} utilisateurs créés :`);
+  console.log("   - Administrateur : admin@pretymelo.com (mot de passe: password123)");
+  console.log("   - Utilisateur    : test@pretymelo.com  (mot de passe: password123)");
 
   // 3. Paramètres Système réels et essentiels
   const defaultSettings = [

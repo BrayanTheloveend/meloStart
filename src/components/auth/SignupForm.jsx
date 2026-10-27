@@ -50,7 +50,7 @@ export default function SignupForm() {
     try {
       if (session?.user) {
         localStorage.setItem(
-          "melostars_user",
+          "pretymelo_user",
           JSON.stringify({
             email: session.user.email,
             name: session.user.name,
@@ -112,7 +112,7 @@ export default function SignupForm() {
       // Synchronisation du localStorage de confort
       try {
         localStorage.setItem(
-          "melostars_user",
+          "pretymelo_user",
           JSON.stringify({
             email: cleanEmail,
             name: cleanName || cleanEmail.split("@")[0],
@@ -219,7 +219,7 @@ export default function SignupForm() {
               </Box>
             </HStack>
             <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="ink.900" mb="1">
-              Bienvenue sur melostars !
+              Bienvenue sur pretymelo !
             </Text>
             <Text fontSize="xs" color="ink.600" fontFamily="ui">
               Vos 10 Notes ont été créditées. Redirection vers le studio...

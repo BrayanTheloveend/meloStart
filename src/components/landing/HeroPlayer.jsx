@@ -66,7 +66,7 @@ export default function HeroPlayer() {
           setTrack({
             id: t.id,
             title: t.title,
-            prompt: t.prompt ? `« ${t.prompt} »` : "« Une mélodie personnalisée créée avec melostars. »",
+            prompt: t.prompt ? `« ${t.prompt} »` : "« Une mélodie personnalisée créée avec pretymelo. »",
             meta: `${t.genre || "Afrobeat"} · ${t.moods?.[0] || "Joyeux"} · Studio HD`,
             vocalDesc: t.vocalType === "female" ? "Féminine, chaleureuse" : t.vocalType === "male" ? "Masculine, expressive" : "Instrumental pur",
             audioUrl: t.audioUrl,

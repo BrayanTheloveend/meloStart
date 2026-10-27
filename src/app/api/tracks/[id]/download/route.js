@@ -46,7 +46,7 @@ export async function GET(req, context) {
     }
 
     // Nom de fichier propre et sécurisé
-    const sanitizedTitle = (track.title || "melostars-track")
+    const sanitizedTitle = (track.title || "pretymelo-track")
       .replace(/[^\w\s\u00C0-\u017F-]/gi, "")
       .trim()
       .replace(/\s+/g, "_")
@@ -89,7 +89,7 @@ export async function GET(req, context) {
       try {
         const remoteRes = await fetch(track.audioUrl, {
           headers: {
-            "User-Agent": "meloStart-Media-Fetcher/1.0",
+            "User-Agent": "pretymelo-Media-Fetcher/1.0",
           },
         });
 

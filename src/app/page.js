@@ -11,13 +11,37 @@ import Pricing from "@/components/landing/Pricing";
 import Testimonials from "@/components/landing/Testimonials";
 import Faq from "@/components/landing/Faq";
 import CtaBanner from "@/components/landing/CtaBanner";
+import { prisma } from "@/lib/prisma";
 
-export default function HomePage() {
+
+export default async function HomePage() {
+  let initialUsers = [];
+  let totalUsers = 0;
+
+  try {
+    const [users, count] = await Promise.all([
+      prisma.user.findMany({
+        take: 4,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+        },
+      }),
+      prisma.user.count(),
+    ]);
+    initialUsers = users;
+    totalUsers = count;
+  } catch (error) {
+    console.warn("[HomePage] Impossible de charger les utilisateurs de la BDD pour le Hero:", error?.message || error);
+  }
+
   return (
     <>
       <Header />
       <main>
-        <Hero />
+        <Hero initialUsers={initialUsers} initialTotalCount={totalUsers} />
         <GenreMarquee />
         {/* <Features /> */}
         <UseCases />

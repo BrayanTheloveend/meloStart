@@ -74,7 +74,7 @@ export default function Footer() {
 
         <Flex mt="14" pt="6" borderTopWidth="1px" borderColor="paper.200" direction={{ base: "column", sm: "row" }} justify="space-between" align="center" gap="4">
           <Text fontSize="sm" color="ink.400">
-            © 2026 melostars. Tous droits réservés.
+            © 2026 pretymelo. Tous droits réservés.
           </Text>
           <HStack gap="2">
             {socials.map(({ icon: Icon, label }) => (
