@@ -111,7 +111,7 @@ export async function POST(req) {
             status: "PROCESSING",
             progress: 80,
             audioUrl: primaryAudio.audio_url || primaryAudio.stream_audio_url || track.audioUrl,
-            coverUrl: primaryAudio.image_url || primaryAudio.image_large_url || track.coverUrl,
+            coverUrl: track.coverUrl || primaryAudio.image_url || primaryAudio.image_large_url || null,
             duration: primaryAudio.duration ? Math.round(primaryAudio.duration) : track.duration,
           },
         });
@@ -132,18 +132,20 @@ export async function POST(req) {
         primaryAudio?.source_audio_url ||
         track.audioUrl;
 
+      // Préserver la pochette uploadée par l'utilisateur si existante
       const finalCoverUrl =
+        track.coverUrl ||
         primaryAudio?.image_url ||
         primaryAudio?.image_large_url ||
         primaryAudio?.source_image_url ||
-        track.coverUrl;
+        null;
 
       const finalDuration = primaryAudio?.duration
         ? Math.round(primaryAudio.duration)
         : track.duration;
 
-      const finalTitle = primaryAudio?.title || track.title;
-      const finalLyrics = primaryAudio?.prompt || track.lyrics;
+      const finalTitle = track.title || primaryAudio?.title;
+      const finalLyrics = track.lyrics || primaryAudio?.prompt || null;
 
       await prisma.track.update({
         where: { id: track.id },

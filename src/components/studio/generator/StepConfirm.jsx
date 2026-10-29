@@ -1,14 +1,15 @@
 "use client";
+
 import {
   Badge, Box, Button, Flex, HStack, Image, Input,
   SimpleGrid, Stack, Text,
 } from "@chakra-ui/react";
-import { LuGlobe, LuLock, LuWandSparkles, LuZap } from "react-icons/lu";
 import { LANGUAGES, flagUrl } from "./constants";
 import { SUNO_MODELS } from "@/services/musicAiApi";
 
 /**
  * Étape 6 : Récapitulatif & lancement de la génération
+ * Design Light Mode sobre et éditorial.
  */
 export default function StepConfirm({
   selectedOccasionData,
@@ -37,97 +38,107 @@ export default function StepConfirm({
   return (
     <Stack gap="5" textAlign="center" maxW="490px" mx="auto" w="full">
       <Stack gap="1">
-        <Text fontFamily="heading" fontWeight="800" fontSize={{ base: "2xl", sm: "3xl" }} color="ink.900" letterSpacing="-0.03em">
+        <Text fontFamily="heading" fontWeight="800" fontSize={{ base: "2xl", sm: "3xl" }} color="slate.900" letterSpacing="-0.03em">
           Prêt à composer votre musique ?
         </Text>
-        <Text fontSize="sm" color="ink.500">
+        <Text fontSize="sm" color="slate.500">
           Vérifiez vos choix avant de lancer la création avec Suno AI
         </Text>
       </Stack>
 
-      {/* Récapitulatif */}
-      <Box p="5" rounded="2xl" bg="paper.0" borderWidth="1.5px" borderColor="paper.200" w="full"
-        textAlign="left" boxShadow="0 4px 20px rgba(0,0,0,0.03)">
+      {/* Récapitulatif blanc et bordé */}
+      <Box
+        p="5" rounded="2xl" bg="white"
+        borderWidth="1px" borderColor="slate.200" w="full"
+        textAlign="left" boxShadow="0 2px 10px rgba(0,0,0,0.03)"
+      >
         <Stack gap="3">
           {/* Occasion */}
-          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="paper.150" pb="2">
-            <Text fontSize="xs" color="ink.500">Occasion</Text>
+          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="slate.100" pb="2">
+            <Text fontSize="xs" color="slate.500">Occasion</Text>
             <HStack gap="1.5">
-              <Image src={selectedOccasionData.icon} alt={selectedOccasionData.title} width="20px" height="20px" />
-              <Text fontFamily="ui" fontWeight="700" fontSize="xs" color="ink.900">{selectedOccasionData.title}</Text>
+              {selectedOccasionData?.icon && (
+                <Image src={selectedOccasionData.icon} alt={selectedOccasionData.title} width="20px" height="20px" />
+              )}
+              <Text fontWeight="700" fontSize="xs" color="slate.900">{selectedOccasionData?.title}</Text>
             </HStack>
           </Flex>
 
           {/* Voix */}
-          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="paper.150" pb="2">
-            <Text fontSize="xs" color="ink.500">Voix</Text>
+          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="slate.100" pb="2">
+            <Text fontSize="xs" color="slate.500">Voix</Text>
             <HStack gap="1.5">
-              <Image src={selectedVoiceData.icon} alt={selectedVoiceData.title} width="20px" height="20px" />
-              <Text fontFamily="ui" fontWeight="700" fontSize="xs" color="ink.900">
-                {selectedVoiceData.title}{vocalGender !== "auto" && !instrumental && ` (${vocalGender.toUpperCase()})`}
+              {selectedVoiceData?.icon && (
+                <Image src={selectedVoiceData.icon} alt={selectedVoiceData.title} width="20px" height="20px" />
+              )}
+              <Text fontWeight="700" fontSize="xs" color="slate.900">
+                {selectedVoiceData?.title}{vocalGender !== "auto" && !instrumental && ` (${vocalGender.toUpperCase()})`}
               </Text>
             </HStack>
           </Flex>
 
           {/* Style */}
-          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="paper.150" pb="2">
-            <Text fontSize="xs" color="ink.500">Style musical</Text>
-            <Badge px="2.5" py="0.5" rounded="full" bg="brand.violetTint" color="brand.violetDeep" fontSize="xs" fontWeight="700">
+          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="slate.100" pb="2">
+            <Text fontSize="xs" color="slate.500">Style musical</Text>
+            <Badge px="2.5" py="0.5" rounded="full" bg="purple.50" color="purple.700" fontSize="xs" fontWeight="700">
               {musicStyle}
             </Badge>
           </Flex>
 
           {/* Langue */}
-          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="paper.150" pb="2">
-            <Text fontSize="xs" color="ink.500">Langue</Text>
+          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="slate.100" pb="2">
+            <Text fontSize="xs" color="slate.500">Langue</Text>
             <HStack gap="1.5">
               {lang && (
                 <Box rounded="xs" overflow="hidden" boxShadow="0 1px 3px rgba(0,0,0,0.18)" lineHeight="0" flexShrink={0}>
-                  <img src={flagUrl(lang.code, "20x15")} srcSet={`${flagUrl(lang.code, "40x30")} 2x`}
-                    alt={lang.country} width={20} height={15} style={{ display: "block" }} />
+                  <img
+                    src={flagUrl(lang.code, "20x15")}
+                    srcSet={`${flagUrl(lang.code, "40x30")} 2x`}
+                    alt={lang.country} width={20} height={15} style={{ display: "block" }}
+                  />
                 </Box>
               )}
-              <Text fontFamily="ui" fontWeight="700" fontSize="xs" color="ink.900">
+              <Text fontWeight="700" fontSize="xs" color="slate.900">
                 {lang?.label || "Français"}
               </Text>
             </HStack>
           </Flex>
 
           {/* Pochette */}
-          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="paper.150" pb="2">
-            <Text fontSize="xs" color="ink.500">Pochette</Text>
+          <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="slate.100" pb="2">
+            <Text fontSize="xs" color="slate.500">Pochette</Text>
             {coverUrl ? (
               <HStack gap="2">
-                <Box boxSize="6" rounded="md" overflow="hidden" borderWidth="1px" borderColor="paper.300">
+                <Box boxSize="6" rounded="md" overflow="hidden" borderWidth="1px" borderColor="slate.300">
                   <Image src={coverUrl} alt="Cover" w="full" h="full" objectFit="cover" />
                 </Box>
-                <Text fontSize="xs" fontWeight="700" color="brand.violetDeep">Personnalisée</Text>
+                <Text fontSize="xs" fontWeight="700" color="purple.700">Personnalisée</Text>
               </HStack>
             ) : (
-              <Text fontSize="xs" color="ink.500" fontStyle="italic">Générée automatiquement</Text>
+              <Text fontSize="xs" color="slate.500">Générée par Suno</Text>
             )}
           </Flex>
 
           {/* Titre (si custom) */}
           {customTitle.trim() && (
-            <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="paper.150" pb="2">
-              <Text fontSize="xs" color="ink.500">Titre personnalisé</Text>
-              <Text fontFamily="ui" fontWeight="700" fontSize="xs" color="ink.900">« {customTitle.trim()} »</Text>
+            <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="slate.100" pb="2">
+              <Text fontSize="xs" color="slate.500">Titre personnalisé</Text>
+              <Text fontWeight="700" fontSize="xs" color="slate.900">« {customTitle.trim()} »</Text>
             </Flex>
           )}
 
           {/* Histoire */}
           <Box pt="1">
-            <Text fontSize="2xs" color="ink.400" mb="1">Votre histoire / prompt :</Text>
-            <Text fontSize="xs" color="ink.700" fontStyle="italic" noOfLines={3}>
+            <Text fontSize="2xs" color="slate.400" mb="1">Votre histoire / consigne :</Text>
+            <Text fontSize="xs" color="slate.700" noOfLines={3}>
               « {story || "Création musicale sur mesure pretymelo"} »
             </Text>
           </Box>
 
           {lyrics.trim() && (
             <Box pt="1">
-              <Text fontSize="2xs" color="brand.violetDeep" fontWeight="700">
-                ✍️ Paroles personnalisées ({lyrics.split("\n").filter(Boolean).length} lignes)
+              <Text fontSize="2xs" color="purple.700" fontWeight="700">
+                Paroles personnalisées ({lyrics.split("\n").filter(Boolean).length} vers)
               </Text>
             </Box>
           )}
@@ -135,94 +146,106 @@ export default function StepConfirm({
       </Box>
 
       {/* Visibilité */}
-      <Flex p="3.5" rounded="2xl" bg="paper.50"
-        borderWidth="1.5px" borderColor={isPublicTrack ? "green.300" : "paper.200"}
+      <Flex
+        p="4" rounded="2xl" bg="white"
+        borderWidth="1px" borderColor={isPublicTrack ? "emerald.300" : "slate.200"}
         justify="space-between" align="center" cursor="pointer"
         onClick={onTogglePublic}
-        _hover={{ borderColor: isPublicTrack ? "green.400" : "brand.violet" }}
-        transition="all 0.2s">
-        <HStack gap="3" align="center">
-          <Flex boxSize="9" rounded="full" align="center" justify="center"
-            bg={isPublicTrack ? "green.100" : "paper.200"}
-            color={isPublicTrack ? "green.600" : "ink.400"}>
-            {isPublicTrack ? <LuGlobe size={18} /> : <LuLock size={18} />}
-          </Flex>
-          <Box textAlign="left">
-            <Text fontSize="xs" fontWeight="700" color="ink.900">
-              {isPublicTrack ? "🌐 Public (visible sur l'accueil)" : "🔒 Privé (bibliothèque personnelle)"}
-            </Text>
-            <Text fontSize="2xs" color="ink.500">
-              {isPublicTrack ? "Ce morceau sera partagé dans la vitrine publique du site" : "Ce morceau reste privé dans votre espace personnel"}
-            </Text>
-          </Box>
-        </HStack>
-        <Badge size="sm" colorPalette={isPublicTrack ? "green" : "gray"}
-          variant={isPublicTrack ? "solid" : "subtle"} rounded="full" px="2.5">
+        _hover={{ borderColor: "purple.500" }}
+        transition="all 0.18s ease"
+      >
+        <Box textAlign="left">
+          <Text fontSize="xs" fontWeight="700" color="slate.900">
+            {isPublicTrack ? "Visibilité publique" : "Visibilité privée"}
+          </Text>
+          <Text fontSize="2xs" color="slate.500">
+            {isPublicTrack ? "Partagé dans la galerie pretymelo" : "Réservé à votre bibliothèque personnelle"}
+          </Text>
+        </Box>
+        <Badge
+          px="2.5" py="1" rounded="full"
+          bg={isPublicTrack ? "emerald.50" : "slate.100"}
+          color={isPublicTrack ? "emerald.700" : "slate.600"}
+          borderWidth="1px"
+          borderColor={isPublicTrack ? "emerald.200" : "slate.200"}
+          fontSize="2xs" fontWeight="700"
+        >
           {isPublicTrack ? "Public" : "Privé"}
         </Badge>
       </Flex>
 
       {/* Options avancées */}
-      <Box rounded="2xl" borderWidth="1.5px"
-        borderColor={isAdvancedOpen ? "brand.violet" : "paper.200"}
-        bg="paper.0" overflow="hidden" transition="all 0.2s">
-        <Flex p="3.5" align="center" justify="space-between" cursor="pointer"
+      <Box
+        rounded="2xl" borderWidth="1px"
+        display={'none'}
+        borderColor={isAdvancedOpen ? "purple.400" : "slate.200"}
+        bg="white" overflow="hidden" transition="all 0.18s ease"
+      >
+        <Flex
+          p="3.5" align="center" justify="space-between" cursor="pointer"
           onClick={onToggleAdvanced}
-          bg={isAdvancedOpen ? "brand.violetTint" : "paper.50"}
-          _hover={{ bg: "brand.violetTint" }}>
+          bg={isAdvancedOpen ? "purple.50" : "white"}
+          _hover={{ bg: "slate.50" }}
+        >
           <Box textAlign="left">
-            <Text fontSize="xs" fontWeight="700" color="ink.900">Options avancées</Text>
-            <Text fontSize="3xs" color="ink.500">Titre sur mesure, tags à exclure, modèle Suno</Text>
+            <Text fontSize="xs" fontWeight="700" color="slate.900">Options avancées</Text>
+            <Text fontSize="3xs" color="slate.500">Titre spécifique, exclusions, choix du modèle Suno</Text>
           </Box>
-          <HStack gap="1.5">
-            <Badge size="2xs" colorPalette={isCustomModeActive ? "purple" : "gray"} rounded="full">
+          <HStack gap="2">
+            <Badge size="2xs" bg="slate.100" color="slate.600" rounded="full">
               {isCustomModeActive ? "Mode Personnalisé" : "Mode Simple"}
             </Badge>
-            <Text fontSize="xs" color="ink.400">{isAdvancedOpen ? "▲" : "▼"}</Text>
+            <Text fontSize="xs" color="slate.400">{isAdvancedOpen ? "▲" : "▼"}</Text>
           </HStack>
         </Flex>
 
         {isAdvancedOpen && (
-          <Stack gap="3.5" p="4" textAlign="left" bg="paper.0" borderTopWidth="1px" borderColor="paper.200">
+          <Stack gap="3.5" p="4" textAlign="left" bg="white" borderTopWidth="1px" borderColor="slate.200">
             <Box>
-              <Text fontSize="xs" fontWeight="700" color="ink.800" mb="1">Titre personnalisé (Optionnel)</Text>
+              <Text fontSize="xs" fontWeight="700" color="slate.800" mb="1">Titre de la chanson (Optionnel)</Text>
               <Input
                 value={customTitle}
                 onChange={(e) => onCustomTitleChange(e.target.value.slice(0, 80))}
                 placeholder="Ex: Fatou, 30 ans de lumière"
-                rounded="xl" fontSize="xs" h="9" borderColor="paper.300" bg="paper.50"
+                rounded="xl" fontSize="xs" h="9" borderColor="slate.300" bg="slate.50"
               />
-              <Text fontSize="3xs" color="ink.400" mt="1">{customTitle.length}/80 caractères</Text>
+              <Text fontSize="3xs" color="slate.400" mt="1">{customTitle.length}/80 caractères</Text>
             </Box>
 
             <Box>
-              <Text fontSize="xs" fontWeight="700" color="ink.800" mb="1">Éléments indésirables (Optionnel)</Text>
+              <Text fontSize="xs" fontWeight="700" color="slate.800" mb="1">Éléments indésirables (Optionnel)</Text>
               <Input
                 value={negativeTags}
                 onChange={(e) => onNegativeTagsChange(e.target.value.slice(0, 500))}
                 placeholder="Ex: pas de batterie agressive, pas de cris"
-                rounded="xl" fontSize="xs" h="9" borderColor="paper.300" bg="paper.50"
+                rounded="xl" fontSize="xs" h="9" borderColor="slate.300" bg="slate.50"
               />
-              <Text fontSize="3xs" color="ink.400" mt="1">{negativeTags.length}/500 · Styles ou sons à exclure</Text>
+              <Text fontSize="3xs" color="slate.400" mt="1">{negativeTags.length}/500 · Styles ou sons à exclure</Text>
             </Box>
 
             <Box>
-              <Text fontSize="xs" fontWeight="700" color="ink.800" mb="1.5">Version du moteur IA Suno</Text>
+              <Text fontSize="xs" fontWeight="700" color="slate.800" mb="1.5">Version du moteur IA Suno</Text>
               <SimpleGrid columns={2} gap="2">
                 {SUNO_MODELS.map((m) => {
                   const isSel = model === m.id;
                   return (
-                    <Box key={m.id} as="button" type="button" p="2.5" rounded="xl"
+                    <Box
+                      key={m.id} as="button" type="button" p="2.5" rounded="xl"
                       borderWidth={isSel ? "2px" : "1px"}
-                      borderColor={isSel ? "brand.violetDeep" : "paper.250"}
-                      bg={isSel ? "brand.violetTint" : "paper.50"}
+                      borderColor={isSel ? "purple.600" : "slate.200"}
+                      bg={isSel ? "purple.50" : "slate.50"}
                       textAlign="left" onClick={() => onModelChange(m.id)}
-                      cursor="pointer" transition="all 0.15s">
+                      cursor="pointer" transition="all 0.15s"
+                    >
                       <Flex justify="space-between" align="center">
-                        <Text fontSize="xs" fontWeight="700" color="ink.900">{m.label}</Text>
-                        {m.badge && <Badge size="2xs" colorPalette={isSel ? "purple" : "gray"}>{m.badge}</Badge>}
+                        <Text fontSize="xs" fontWeight="700" color={isSel ? "purple.800" : "slate.900"}>{m.label}</Text>
+                        {m.badge && (
+                          <Badge size="2xs" bg={isSel ? "purple.200" : "slate.200"} color={isSel ? "purple.800" : "slate.700"}>
+                            {m.badge}
+                          </Badge>
+                        )}
                       </Flex>
-                      <Text fontSize="3xs" color="ink.500" mt="0.5" noOfLines={1}>{m.desc}</Text>
+                      <Text fontSize="3xs" color="slate.500" mt="0.5" noOfLines={1}>{m.desc}</Text>
                     </Box>
                   );
                 })}
@@ -233,10 +256,12 @@ export default function StepConfirm({
       </Box>
 
       {/* Coût en Notes */}
-      <HStack justify="center" gap="2" p="3" rounded="2xl"
-        bg="brand.violetTint" borderWidth="1.5px" borderColor="rgba(124, 58, 237, 0.3)" w="full">
-        <Text fontFamily="ui" fontWeight="700" fontSize="xs" color="brand.violetDeep">
-          Coût de composition : <b>2 Notes</b> (Votre solde : {notes} Notes)
+      <HStack
+        justify="center" gap="2" p="3" rounded="2xl"
+        bg="purple.50" borderWidth="1px" borderColor="purple.200" w="full"
+      >
+        <Text fontWeight="700" fontSize="xs" color="purple.800">
+          Coût de composition : <b>2 Notes</b> (Votre solde actuel : {notes} Notes)
         </Text>
       </HStack>
 
@@ -245,23 +270,25 @@ export default function StepConfirm({
         {notes >= notesPerSong ? (
           <Button
             size="lg" rounded="full" color="white"
-            bg="linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)"
+            bg="purple.600"
             onClick={onLaunch}
-            _hover={{ transform: "translateY(-1px)", boxShadow: "0 8px 25px rgba(124, 58, 237, 0.45)" }}
+            _hover={{ bg: "purple.700", transform: "translateY(-1px)" }}
             _active={{ transform: "scale(0.98)" }}
-            fontFamily="ui" fontWeight="700" fontSize="sm" minW="260px" h="12" gap="2"
-            boxShadow="0 4px 18px rgba(124, 58, 237, 0.35)"
+            fontWeight="700" fontSize="sm" minW="260px" h="12"
+            boxShadow="0 4px 14px rgba(124, 58, 237, 0.3)"
           >
-            <LuWandSparkles size={16} /> Lancer la composition (2 Notes)
+            Lancer la composition (2 Notes)
           </Button>
         ) : (
           <Stack gap="2" align="center">
-            <Text fontSize="xs" color="red.500" fontWeight="600">
+            <Text fontSize="xs" color="rose.600" fontWeight="600">
               Solde insuffisant pour créer cette chanson (2 Notes requises).
             </Text>
-            <Button size="md" rounded="full" color="white" bg="red.600" _hover={{ bg: "red.700" }}
-              onClick={onOpenRecharge} fontFamily="ui" fontWeight="700" gap="1.5">
-              <LuZap size={14} /> Recharger mes Notes
+            <Button
+              size="md" rounded="full" color="white" bg="rose.600" _hover={{ bg: "rose.700" }}
+              onClick={onOpenRecharge} fontWeight="700"
+            >
+              Recharger mes Notes
             </Button>
           </Stack>
         )}

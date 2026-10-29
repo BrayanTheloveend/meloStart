@@ -5,7 +5,6 @@ import { refundCredits } from "@/lib/credits";
 import { deletePublicFile } from "@/lib/storage";
 import { getSunoTaskStatus } from "@/lib/sunoService";
 
-
 /**
  * GET /api/tracks/[id]
  * Endpoint de synchronisation et polling direct avec Suno API (sans Redis ni BullMQ).
@@ -57,13 +56,16 @@ export async function GET(req, { params }) {
           if (isSuccess && primaryAudio) {
             const finalAudioUrl =
               primaryAudio.audio_url || primaryAudio.stream_audio_url || track.audioUrl;
+            // Préserver la pochette uploadée par l'utilisateur si elle existe, sinon utiliser celle de Suno
             const finalCoverUrl =
-              primaryAudio.image_url || primaryAudio.image_large_url || track.coverUrl;
+              track.coverUrl || primaryAudio.image_url || primaryAudio.image_large_url || null;
             const finalDuration = primaryAudio.duration
               ? Math.round(primaryAudio.duration)
               : track.duration;
-            const finalTitle = primaryAudio.title || track.title;
-            const finalLyrics = primaryAudio.prompt || track.lyrics;
+            // Préserver le titre utilisateur si existant
+            const finalTitle = track.title || primaryAudio.title;
+            // Préserver les paroles utilisateur si existantes, sinon récupérer celles composées par Suno
+            const finalLyrics = track.lyrics || primaryAudio.prompt || null;
 
             track = await prisma.track.update({
               where: { id: track.id },
@@ -110,7 +112,7 @@ export async function GET(req, { params }) {
               data: {
                 progress: 80,
                 audioUrl: primaryAudio.audio_url || primaryAudio.stream_audio_url || track.audioUrl,
-                coverUrl: primaryAudio.image_url || track.coverUrl,
+                coverUrl: track.coverUrl || primaryAudio.image_url || null,
               },
               include: {
                 user: { select: { id: true, name: true, image: true } },

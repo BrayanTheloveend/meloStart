@@ -4,16 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
-  Avatar, Badge, Box, Button, Flex, HStack, IconButton, Spinner, Stack, Text,
+  Avatar, Badge, Box, Button, Flex, HStack, Spinner, Stack, Text,
 } from "@chakra-ui/react";
-import { LuArrowLeft, LuHouse, LuPlus, LuShieldAlert, LuRotateCcw, LuZap } from "react-icons/lu";
 
 // Services & utilitaires
 import { generateMusicWithAI, NOTES_PER_SONG } from "@/services/musicAiApi";
-import { accent } from "@/theme/system";
 
 // Constantes partagées
-import { OCCASIONS, VOICE_TYPES, MUSIC_STYLES } from "./generator/constants";
+import { OCCASIONS, VOICE_TYPES, MUSIC_STYLES, LANGUAGES } from "./generator/constants";
 
 // Composants de chaque étape
 import StepOccasion from "./generator/StepOccasion";
@@ -44,92 +42,99 @@ export default function GeneratorPanel({
   const [currentStep, setCurrentStep] = useState(1);
 
   // ── Étape 1 : Occasion ───────────────────────────────
-  const [occasion, setOccasion]   = useState(initialData.occasion || "birthday");
+  const [occasion, setOccasion] = useState(initialData.occasion || "birthday");
 
   // ── Étape 2 : Histoire & Langue ──────────────────────
-  const [story, setStory]         = useState(initialData.story || "");
-  const [language, setLanguage]   = useState(initialData.language || "French");
-  const [lyrics, setLyrics]       = useState(initialData.customLyrics || initialData.lyrics || "");
+  const [story, setStory] = useState(initialData.story || "");
+  const [language, setLanguage] = useState(initialData.language || "French");
+  const [lyrics, setLyrics] = useState(initialData.customLyrics || initialData.lyrics || "");
   const [showCustomLyrics, setShowCustomLyrics] = useState(false);
   const [customMode, setCustomMode] = useState(false);
 
   // ── Étape 3 : Voix ───────────────────────────────────
-  const [vocalType, setVocalType]   = useState(initialData.vocalType || "female");
+  const [vocalType, setVocalType] = useState(initialData.vocalType || "female");
   const [vocalGender, setVocalGender] = useState("auto");
   const [instrumental, setInstrumental] = useState(false);
 
   // ── Étape 4 : Style ──────────────────────────────────
   const [musicStyle, setMusicStyle] = useState(initialData.musicStyle || "Afrobeat");
 
-  // ── Étape 5 : Pochette ───────────────────────────────
-  const [coverUrl, setCoverUrl]     = useState(initialData.coverUrl || "");
+  // ── Étape 5 : Pochette (coverUrl) ────────────────────
+  const [coverUrl, setCoverUrl] = useState(initialData.coverUrl || "");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
   // ── Étape 6 : Options avancées ───────────────────────
-  const [customTitle, setCustomTitle]   = useState("");
+  const [customTitle, setCustomTitle] = useState("");
   const [negativeTags, setNegativeTags] = useState("");
-  const [model, setModel]               = useState("V6");
+  const [model, setModel] = useState("V6");
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-  const [isPublicTrack, setIsPublicTrack]   = useState(session?.user?.role === "ADMIN");
+  const [isPublicTrack, setIsPublicTrack] = useState(session?.user?.role === "ADMIN");
 
   // ── Génération ───────────────────────────────────────
-  const [status, setStatus]           = useState("idle"); // idle | generating | completed | error
-  const [progress, setProgress]       = useState(0);
-  const [stepLabel, setStepLabel]     = useState("");
+  const [status, setStatus] = useState("idle"); // idle | generating | completed | error
+  const [progress, setProgress] = useState(0);
+  const [stepLabel, setStepLabel] = useState("");
   const [generatedTrack, setGeneratedTrack] = useState(null);
   const [generationError, setGenerationError] = useState("");
   const [wasRefunded, setWasRefunded] = useState(false);
 
-  // Sync initialData
+  // Synchronisation avec initialData
   useEffect(() => {
-    if (initialData.story)     setStory(initialData.story);
+    if (initialData.story) setStory(initialData.story);
     if (initialData.musicStyle) setMusicStyle(initialData.musicStyle);
-    if (initialData.occasion)   setOccasion(initialData.occasion);
-    if (initialData.language)   setLanguage(initialData.language);
-    if (initialData.coverUrl)   setCoverUrl(initialData.coverUrl);
+    if (initialData.occasion) setOccasion(initialData.occasion);
+    if (initialData.language) setLanguage(initialData.language);
+    if (initialData.coverUrl) setCoverUrl(initialData.coverUrl);
     if (initialData.vocalType) {
       setVocalType(initialData.vocalType);
       if (initialData.vocalType === "instrumental") setInstrumental(true);
     }
   }, [initialData]);
 
-  // ── Navigation Stepper ───────────────────────────────
+  // ── Navigation du Stepper ────────────────────────────
   const handlePrevStep = () => {
     if (currentStep > 1) setCurrentStep((p) => p - 1);
-    else if (onBack)     onBack();
-    else                 router.push("/studio");
+    else if (onBack) onBack();
+    else router.push("/studio");
   };
+
   const handleNextStep = () => {
     if (currentStep < TOTAL_STEPS) setCurrentStep((p) => p + 1);
   };
 
-  // ── Handlers step 1 ──────────────────────────────────
+  // ── Handlers étape 2 ─────────────────────────────────
   const handleFillSample = () => {
-    const occ = OCCASIONS.find((o) => o.id === occasion) || OCCASIONS[0];
-    setStory(occ.sample);
+    const samples = {
+      birthday: "Chanson joyeuse et dansante pour les 50 ans de ma mère Fatou. Elle est généreuse, adore danser sur l'afrobeat et rassemble toujours toute la famille.",
+      love: "Une déclaration d'amour poétique et douce pour Aya. Évoque notre première rencontre sous la pluie et nos projets d'avenir.",
+      wedding: "Célébration festive du mariage de Moussa et Mariam, ambiance d'union, d'amour, de danse et de bénédictions.",
+      party: "Ambiance de fête explosive du samedi soir entre amis, énergie festive et rythme entraînant qui fait sauter tout le monde.",
+    };
+    setStory(samples[occasion] || samples.birthday);
   };
 
-  // ── Handlers step 3 ──────────────────────────────────
+  // ── Handlers étape 3 : voix ──────────────────────────
   const handleSelectVoice = (v) => {
     setVocalType(v.id);
-    if (v.isInstrumental) { setInstrumental(true); setVocalGender("auto"); }
-    else { setInstrumental(false); setVocalGender(v.gender || "auto"); }
+    if (v.isInstrumental) {
+      setInstrumental(true);
+      setVocalGender("auto");
+    } else {
+      setInstrumental(false);
+      setVocalGender(v.gender || "auto");
+    }
   };
 
-  // ── Handlers step 5 : cover ──────────────────────────
+  // ── Handlers étape 5 : pochette ──────────────────────
   const handleCoverChange = (url, error = "", uploading = false) => {
-    if (url !== null) setCoverUrl(url);
+    if (url !== null && url !== undefined) setCoverUrl(url);
     setUploadError(error);
     setIsUploading(uploading);
   };
 
-  // ── Lancement de la génération ───────────────────────
+  // ── Lancement de la composition audio Suno ───────────
   const handleStartGeneration = async () => {
-    setGenerationError("");
-    setWasRefunded(false);
-
-    if (!session?.user?.id) { router.push("/auth/signin"); return; }
     if (notes < NOTES_PER_SONG) {
       if (onOpenRecharge) onOpenRecharge();
       else router.push("/studio/recharge");
@@ -138,15 +143,16 @@ export default function GeneratorPanel({
 
     setStatus("generating");
     setProgress(15);
-    setStepLabel("Transmission des consignes créatives à Suno AI...");
+    setStepLabel("Transmission des consignes créatives au studio IA...");
+    setGenerationError("");
+    setWasRefunded(false);
 
-    const finalStyle = musicStyle || "Afrobeat";
+    const isCustom = Boolean(customMode || lyrics.trim() || customTitle.trim() || negativeTags.trim());
     const isInst = instrumental || vocalType === "instrumental";
-    const finalLyrics = lyrics.trim();
-    const isCustom = Boolean(customMode || finalLyrics || customTitle.trim() || negativeTags.trim());
-
-    const { LANGUAGES } = await import("./generator/constants");
+    const finalStyle = musicStyle;
+    const finalLyrics = isInst ? "" : lyrics.trim();
     let promptText = story.trim();
+
     if (!isCustom && language && language !== "English") {
       const langLabel = LANGUAGES.find((l) => l.id === language)?.label || language;
       if (promptText) promptText = `${promptText} (Chanson en ${langLabel.toLowerCase()})`;
@@ -166,7 +172,7 @@ export default function GeneratorPanel({
       vocalType,
       occasion,
       language,
-      coverUrl: coverUrl || undefined,
+      coverUrl: coverUrl ? coverUrl.trim() : undefined,
       isPublic: isPublicTrack,
     };
 
@@ -189,9 +195,9 @@ export default function GeneratorPanel({
 
       if (onDeductNotes) onDeductNotes(NOTES_PER_SONG);
 
-      // Priorité : coverUrl uploadée > coverUrl retournée par Suno
+      // Priorité stricte : si l'utilisateur a uploadé une pochette, la conserver
       const enrichedResult = result
-        ? { ...result, coverUrl: result.coverUrl || coverUrl || undefined }
+        ? { ...result, coverUrl: coverUrl || result.coverUrl || undefined }
         : result;
 
       setGeneratedTrack(enrichedResult);
@@ -224,48 +230,50 @@ export default function GeneratorPanel({
   const selectedOccasionData = OCCASIONS.find((o) => o.id === occasion) || OCCASIONS[0];
   const selectedVoiceData    = VOICE_TYPES.find((v) => v.id === vocalType) || VOICE_TYPES[0];
 
-  // ── Rendu ────────────────────────────────────────────
   return (
     <Box
-      minH="100dvh" bg="paper.50" color="ink.900"
+      minH="100dvh" bg="#fcfcfd" color="slate.900"
       display="flex" flexDirection="column" position="relative"
-      style={{ background: "radial-gradient(ellipse 90% 50% at 50% 0%, rgba(124,58,237,0.05) 0%, #fafafa 75%)" }}
     >
-      {/* ── EN-TÊTE STICKY ─────────────────────────────── */}
+      {/* ── EN-TÊTE STICKY LIGHT PUR & MINIMALISTE ── */}
       <Box
         as="header"
         h={{ base: "14", md: "16" }}
         px={{ base: "4", md: "8" }}
-        borderBottomWidth="1px" borderColor="paper.200"
-        bg="rgba(255,255,255,0.92)" backdropFilter="blur(16px)"
+        borderBottomWidth="1px" borderColor="slate.200"
+        bg="rgba(255,255,255,0.95)" backdropFilter="blur(16px)"
         position="sticky" top="0" zIndex="30"
       >
         <Flex h="full" align="center" justify="space-between">
-          {/* Gauche : retour */}
-          <HStack gap="1.5">
-            <IconButton size="sm" variant="ghost" rounded="full" color="ink.600"
-              _hover={{ bg: "paper.200", color: "ink.900" }}
-              onClick={handlePrevStep} aria-label="Retour">
-              <LuArrowLeft size={18} />
-            </IconButton>
-            <IconButton size="sm" variant="ghost" rounded="full" color="ink.600"
-              _hover={{ bg: "paper.200", color: "ink.900" }}
-              onClick={() => router.push("/studio")} aria-label="Accueil studio">
-              <LuHouse size={18} />
-            </IconButton>
+          {/* Gauche : Retour simple et lisible */}
+          <HStack gap="2">
+            <Button
+              size="xs" variant="ghost" rounded="full" color="slate.700"
+              _hover={{ bg: "slate.100" }} onClick={handlePrevStep}
+              px="2.5" fontWeight="600"
+            >
+              ← Retour
+            </Button>
+            <Button
+              size="xs" variant="ghost" rounded="full" color="slate.500"
+              _hover={{ bg: "slate.100", color: "slate.900" }}
+              onClick={() => router.push("/studio")}
+            >
+              Studio
+            </Button>
           </HStack>
 
-          {/* Centre : stepper pilules */}
+          {/* Centre : Stepper indicateurs épurés */}
           <HStack gap="2">
             {[1, 2, 3, 4, 5, 6].map((n) => {
               const isActive = currentStep === n;
               const isPast   = currentStep > n;
               return (
-                <Box key={n} as="button" type="button"
-                  h="5px" w={isActive ? "28px" : "6px"} rounded="full"
-                  bg={isActive || isPast ? "brand.violetDeep" : "paper.300"}
-                  boxShadow={isActive ? "0 0 10px rgba(124,58,237,0.4)" : "none"}
-                  transition="all 0.3s cubic-bezier(0.4,0,0.2,1)"
+                <Box
+                  key={n} as="button" type="button"
+                  h="6px" w={isActive ? "28px" : "8px"} rounded="full"
+                  bg={isActive ? "purple.600" : isPast ? "purple.300" : "slate.200"}
+                  transition="all 0.25s ease"
                   cursor={n <= currentStep ? "pointer" : "default"}
                   onClick={() => { if (status === "idle" && n < currentStep) setCurrentStep(n); }}
                   aria-label={`Étape ${n}`}
@@ -274,35 +282,36 @@ export default function GeneratorPanel({
             })}
           </HStack>
 
-          {/* Droite : notes + avatar */}
-          <HStack gap="2.5">
-            <Button size="xs" rounded="full" variant="outline"
-              borderColor="brand.violet" color="brand.violetDeep" bg="brand.violetTint"
+          {/* Droite : Solde de Notes & Profil */}
+          <HStack gap="3">
+            <Button
+              size="xs" rounded="full" variant="outline"
+              borderColor="purple.300" color="purple.800" bg="purple.50"
               onClick={onOpenRecharge || (() => router.push("/studio/recharge"))}
-              fontFamily="ui" fontWeight="700" fontSize="2xs" px="2.5">
-              🎵 {notes} Notes <LuPlus size={11} style={{ marginLeft: "2px" }} />
+              fontWeight="700" fontSize="2xs" px="3"
+            >
+              {notes} Notes +
             </Button>
-            <Box as="button" type="button" onClick={() => router.push("/studio/profil")}
-              rounded="full" p="0.5" borderWidth="1.5px" borderColor="paper.200"
-              boxShadow="0 2px 8px rgba(0,0,0,0.06)"
-              _hover={{ borderColor: "brand.violetDeep", transform: "scale(1.05)" }}
-              _active={{ transform: "scale(0.95)" }}
+            <Box
+              as="button" type="button" onClick={() => router.push("/studio/profil")}
+              rounded="full" p="0.5" borderWidth="1.5px" borderColor="slate.200"
+              _hover={{ borderColor: "purple.500" }}
               transition="all 0.2s" cursor="pointer"
-              display="flex" alignItems="center" justifyContent="center">
+            >
               <Avatar.Root size="xs">
                 <Avatar.Image
                   src={session?.user?.image || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80"}
                   alt={session?.user?.name || "Profil"}
                   referrerPolicy="no-referrer"
                 />
-                <Avatar.Fallback name={session?.user?.name || "Créateur pretymelo"} />
+                <Avatar.Fallback name={session?.user?.name || "Pretymelo"} />
               </Avatar.Root>
             </Box>
           </HStack>
         </Flex>
       </Box>
 
-      {/* ── ZONE PRINCIPALE ────────────────────────────── */}
+      {/* ── ZONE DE CONTENU CENTRALE ── */}
       <Flex flex="1" align="center" justify="center" p={{ base: "4", sm: "6", md: "8" }}>
         <Box
           w="full"
@@ -310,12 +319,12 @@ export default function GeneratorPanel({
           my="auto"
           transition="max-width 0.3s ease"
         >
-          {/* ÉTAPE 1 */}
+          {/* ÉTAPE 1 : OCCASION */}
           {status === "idle" && currentStep === 1 && (
             <StepOccasion occasion={occasion} onSelect={setOccasion} onNext={handleNextStep} />
           )}
 
-          {/* ÉTAPE 2 */}
+          {/* ÉTAPE 2 : HISTOIRE & PAROLES */}
           {status === "idle" && currentStep === 2 && (
             <StepStory
               story={story} onStoryChange={setStory}
@@ -328,12 +337,12 @@ export default function GeneratorPanel({
             />
           )}
 
-          {/* ÉTAPE 3 */}
+          {/* ÉTAPE 3 : TYPE DE VOIX */}
           {status === "idle" && currentStep === 3 && (
             <StepVoice vocalType={vocalType} onSelect={handleSelectVoice} onNext={handleNextStep} />
           )}
 
-          {/* ÉTAPE 4 */}
+          {/* ÉTAPE 4 : STYLE MUSICAL */}
           {status === "idle" && currentStep === 4 && (
             <StepStyle
               musicStyle={musicStyle}
@@ -342,7 +351,7 @@ export default function GeneratorPanel({
             />
           )}
 
-          {/* ÉTAPE 5 */}
+          {/* ÉTAPE 5 : IMAGE DE COUVERTURE (COVER) */}
           {status === "idle" && currentStep === 5 && (
             <StepCover
               coverUrl={coverUrl}
@@ -354,7 +363,7 @@ export default function GeneratorPanel({
             />
           )}
 
-          {/* ÉTAPE 6 */}
+          {/* ÉTAPE 6 : RÉCAPITULATIF & CONFIRMATION */}
           {status === "idle" && currentStep === 6 && (
             <StepConfirm
               selectedOccasionData={selectedOccasionData}
@@ -379,74 +388,66 @@ export default function GeneratorPanel({
             />
           )}
 
-          {/* GÉNÉRATION EN COURS */}
+          {/* ÉTAT : GÉNÉRATION EN DIRECT */}
           {status === "generating" && (
-            <Stack gap="6" textAlign="center" py="8" maxW="440px" mx="auto">
-              <Box
-                boxSize="24" rounded="full" bg="brand.violetTint"
-                display="flex" alignItems="center" justifyContent="center"
-                mx="auto" position="relative">
-                <HStack gap="1.5" align="flex-end" h="28px">
-                  {[14, 24, 18, 28, 16].map((h, i) => (
-                    <Box key={i} w="3.5px" h={`${h}px`} rounded="full" bg="brand.violetDeep"
-                      style={{
-                        animation: `wave ${0.6 + i * 0.15}s ease-in-out infinite alternate`,
-                        transformOrigin: "bottom",
-                      }} />
-                  ))}
-                </HStack>
-              </Box>
+            <Stack gap="6" textAlign="center" py="10" maxW="440px" mx="auto">
+              <Flex
+                boxSize="20" rounded="full" bg="purple.50"
+                borderWidth="2px" borderColor="purple.200"
+                align="center" justify="center" mx="auto"
+              >
+                <Spinner size="lg" color="purple.600" />
+              </Flex>
               <Stack gap="1.5">
-                <Text fontFamily="heading" fontWeight="900" fontSize="2xl" color="ink.900">
-                  pretymelo compose votre titre...
+                <Text fontFamily="heading" fontWeight="800" fontSize="2xl" color="slate.900">
+                  Composition de votre titre...
                 </Text>
-                <Text fontSize="xs" color="ink.500">{stepLabel}</Text>
+                <Text fontSize="xs" color="slate.500">{stepLabel}</Text>
               </Stack>
               <Box w="full">
-                <Box h="2.5" rounded="full" bg="paper.200" overflow="hidden">
-                  <Box h="full" w={`${progress}%`} bg={accent.primary} rounded="full" transition="width 0.4s ease" />
+                <Box h="2.5" rounded="full" bg="slate.100" overflow="hidden">
+                  <Box h="full" w={`${progress}%`} bg="purple.600" rounded="full" transition="width 0.4s ease" />
                 </Box>
-                <Flex justify="space-between" mt="1.5" fontSize="2xs" color="ink.400" fontFamily="ui">
-                  <Text>Studio IA Suno {model}</Text>
+                <Flex justify="space-between" mt="1.5" fontSize="2xs" color="slate.400" fontFamily="mono">
+                  <Text>Studio Suno {model}</Text>
                   <Text fontWeight="700">{progress}%</Text>
                 </Flex>
               </Box>
-              <Text fontSize="2xs" color="ink.400">
+              <Text fontSize="2xs" color="slate.400">
                 La composition et le rendu audio HD sont réalisés en direct. Veuillez patienter...
               </Text>
             </Stack>
           )}
 
-          {/* ERREUR */}
+          {/* ÉTAT : ERREUR */}
           {status === "error" && (
             <Stack gap="5" textAlign="center" py="6" maxW="480px" mx="auto">
-              <Box p="6" rounded="3xl" bg="paper.0" borderWidth="1.5px" borderColor="red.300"
-                boxShadow="0 10px 30px rgba(239,68,68,0.1)">
-                <Box boxSize="12" rounded="full" bg="red.50" color="red.500"
-                  display="flex" alignItems="center" justifyContent="center" mx="auto" mb="3">
-                  <LuShieldAlert size={28} />
-                </Box>
-                <Text fontFamily="heading" fontWeight="800" fontSize="lg" color="red.700" mb="2">
+              <Box p="6" rounded="3xl" bg="white" borderWidth="1.5px" borderColor="rose.300" boxShadow="0 8px 24px rgba(244,63,94,0.08)">
+                <Text fontFamily="heading" fontWeight="800" fontSize="lg" color="rose.700" mb="2">
                   Composition non aboutie
                 </Text>
-                <Text fontSize="xs" color="ink.600" mb="4" lineHeight="relaxed">
+                <Text fontSize="xs" color="slate.600" mb="4" lineHeight="relaxed">
                   {generationError || "Une erreur est survenue lors de la communication avec le moteur audio."}
                 </Text>
                 {wasRefunded && (
-                  <Box p="3" rounded="xl" bg="green.50" borderWidth="1px" borderColor="green.200" mb="4">
-                    <Text fontSize="2xs" color="green.800" fontWeight="700">
-                      🛡️ Vos 2 Notes n&apos;ont pas été débitées (solde sécurisé).
+                  <Box p="3" rounded="xl" bg="emerald.50" borderWidth="1px" borderColor="emerald.200" mb="4">
+                    <Text fontSize="2xs" color="emerald.800" fontWeight="700">
+                      Vos 2 Notes n&apos;ont pas été débitées (solde sécurisé).
                     </Text>
                   </Box>
                 )}
                 <HStack justify="center" gap="3">
-                  <Button size="sm" rounded="full" bg="brand.violetDeep" color="white"
+                  <Button
+                    size="sm" rounded="full" bg="purple.600" color="white"
                     onClick={() => { setStatus("idle"); setCurrentStep(5); }}
-                    _hover={{ bg: "brand.violet" }}>
+                    _hover={{ bg: "purple.700" }}
+                  >
                     Modifier et réessayer
                   </Button>
-                  <Button size="sm" variant="outline" rounded="full" borderColor="paper.300"
-                    onClick={handleResetWizard}>
+                  <Button
+                    size="sm" variant="outline" rounded="full" borderColor="slate.300"
+                    onClick={handleResetWizard}
+                  >
                     Recommencer
                   </Button>
                 </HStack>
@@ -454,7 +455,7 @@ export default function GeneratorPanel({
             </Stack>
           )}
 
-          {/* RÉSULTAT — TrackPlayer */}
+          {/* ÉTAT : MORCEAU FINALISÉ → TRACKPLAYER */}
           {status === "completed" && generatedTrack && (
             <TrackPlayer
               track={generatedTrack}
