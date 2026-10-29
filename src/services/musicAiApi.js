@@ -87,6 +87,7 @@ export async function generateMusicWithAI(params = {}, onProgress) {
     title,
     negativeTags,
     duration,
+    coverUrl: params.coverUrl || undefined,
     imageUrls: params.imageUrls || [],
     videoUrls: params.videoUrls || [],
     audioUrls: params.audioUrls || [],
@@ -121,6 +122,9 @@ export async function generateMusicWithAI(params = {}, onProgress) {
         const min = Math.floor(dur / 60);
         const sec = String(Math.floor(dur % 60)).padStart(2, "0");
 
+        // L'URL de la cover uploadée par l'utilisateur est prioritaire sur celle générée par Suno
+        const finalCoverUrl = params.coverUrl || polledTrack.coverUrl || undefined;
+
         return {
           id: polledTrack.id,
           title: polledTrack.title,
@@ -130,7 +134,7 @@ export async function generateMusicWithAI(params = {}, onProgress) {
           seconds: dur,
           vocalType: polledTrack.vocalType || vocalType,
           audioUrl: polledTrack.audioUrl,
-          coverUrl: polledTrack.coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
+          coverUrl: finalCoverUrl,
           lyrics: polledTrack.lyrics || lyrics,
           lyricsText: polledTrack.lyrics || lyrics,
           createdAt: polledTrack.createdAt,

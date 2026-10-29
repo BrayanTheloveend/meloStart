@@ -42,13 +42,15 @@ export async function POST(req) {
       customMode = false,
       instrumental = false,
       model = "V6",
-      // Mode Non-Personnalisé (Screenshot)
+      // Mode Non-Personnalisé
       prompt = "",
       style = "",
       lyrics = "",
       imageUrls = [],
       videoUrls = [],
       audioUrls = [],
+      // Cover uploadée par l'utilisateur
+      coverUrl = null,
       // Mode Personnalisé
       title = "",
       negativeTags = "",
@@ -142,6 +144,7 @@ export async function POST(req) {
         status: "PROCESSING",
         progress: 15,
         isPublic: trackIsPublic,
+        ...(coverUrl ? { coverUrl } : {}),
       },
     });
 
