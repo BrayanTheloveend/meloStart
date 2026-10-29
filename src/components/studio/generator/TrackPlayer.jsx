@@ -322,7 +322,7 @@ export default function TrackPlayer({
                 type="button"
                 onClick={togglePlay}
                 w="14" h="14" rounded="full"
-                bg="slate.900" color="white"
+                bg="purple.600" color="white"
                 display="flex" alignItems="center" justifyContent="center"
                 boxShadow="0 4px 16px rgba(15,23,42,0.25)"
                 _hover={{ bg: "purple.700", transform: "scale(1.04)" }}

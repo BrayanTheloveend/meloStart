@@ -110,11 +110,11 @@ const saveLibraryToStorage = (val) => {
     updateNotes(notes + amount);
   };
 
-  const addTrack = (newTrack) => {
+  const addTrack = (newTrack, autoPlay = false) => {
     const updated = [newTrack, ...library];
     setLibrary(updated);
     setActivePlayerTrack(newTrack);
-    setIsPlaying(true);
+    setIsPlaying(autoPlay);
     saveLibraryToStorage(updated);
     refreshUserCredits();
   };

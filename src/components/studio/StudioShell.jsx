@@ -206,7 +206,7 @@ export default function StudioShell({ initialTab = "home" }) {
 
       setTrack(created);
       setActivePlayerTrack(created);
-      setIsPlaying(true);
+      setIsPlaying(false);
 
       const nextLib = [created, ...library];
       setLibrary(nextLib);
@@ -565,7 +565,7 @@ export default function StudioShell({ initialTab = "home" }) {
                   const nextLib = [newTrack, ...library];
                   setLibrary(nextLib);
                   setActivePlayerTrack(newTrack);
-                  setIsPlaying(true);
+                  setIsPlaying(false);
                   try {
                     localStorage.setItem("pretymelo_library", JSON.stringify(nextLib));
                     localStorage.setItem("melostars_library", JSON.stringify(nextLib));
