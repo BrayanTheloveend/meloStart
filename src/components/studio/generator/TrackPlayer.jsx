@@ -5,6 +5,7 @@ import {
   Badge, Box, Button, Flex, HStack, Image, Stack, Text,
 } from "@chakra-ui/react";
 import { downloadTrackAudio } from "@/lib/downloadTrack";
+import { LuPause, LuPlay } from "react-icons/lu";
 
 /**
  * Découpe les paroles en sections Spotify ([Verse], [Chorus], etc.) et lignes synchronisables.
@@ -330,14 +331,9 @@ export default function TrackPlayer({
                 aria-label={isPlaying ? "Mettre en pause" : "Lancer la lecture"}
               >
                 {isPlaying ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16" rx="1.5" />
-                    <rect x="14" y="4" width="4" height="16" rx="1.5" />
-                  </svg>
+                  <LuPause size={20} />
                 ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: "3px" }}>
-                    <path d="M6 4l14 8-14 8V4z" />
-                  </svg>
+                  <LuPlay size={20} />
                 )}
               </Box>
             </Flex>
