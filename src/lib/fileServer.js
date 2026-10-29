@@ -73,10 +73,6 @@ export function findTargetFile(segments) {
     path.join(cwd, "public", ...cleanSegments),
     // 3. Dossier uploads à la racine
     path.join(cwd, "uploads", ...withoutUploads),
-    // 4. Dossier public direct
-    path.join(cwd, "public", ...cleanSegments),
-    // 5. Chemin direct depuis la racine
-    path.join(cwd, ...cleanSegments),
   ];
 
   for (const candidate of candidatePaths) {

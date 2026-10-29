@@ -1,5 +1,7 @@
 import { handleServeFile, handleOptions } from "@/lib/fileServer";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Endpoint de distribution publique pour les fichiers sous /uploads/...
  * Permet à Next.js de servir les fichiers médias générés dynamiquement (audio, covers)

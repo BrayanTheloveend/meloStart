@@ -1,5 +1,7 @@
 import { handleServeFile, handleOptions } from "@/lib/fileServer";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Endpoint alternatif sous /api/uploads/... pour compatibilité avec les clients API
  */
