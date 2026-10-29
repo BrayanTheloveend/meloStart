@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { refundCredits } from "@/lib/credits";
+import { downloadAndPersistAudio, downloadAndPersistCover } from "@/lib/storage";
 
 
 /**
@@ -126,19 +127,24 @@ export async function POST(req) {
       body?.status === "SUCCESS" ||
       primaryAudio?.audio_url
     ) {
-      const finalAudioUrl =
+      const rawAudioUrl =
         primaryAudio?.audio_url ||
         primaryAudio?.stream_audio_url ||
         primaryAudio?.source_audio_url ||
         track.audioUrl;
 
-      // Préserver la pochette uploadée par l'utilisateur si existante
-      const finalCoverUrl =
-        track.coverUrl ||
+      // Rapatriement immédiat sur le stockage local du VPS
+      const finalAudioUrl = await downloadAndPersistAudio(rawAudioUrl, track.id);
+
+      // Préserver la pochette uploadée par l'utilisateur si existante, sinon rapatrier celle de Suno
+      let finalCoverUrl = track.coverUrl;
+      const remoteCover =
         primaryAudio?.image_url ||
         primaryAudio?.image_large_url ||
-        primaryAudio?.source_image_url ||
-        null;
+        primaryAudio?.source_image_url;
+      if (!finalCoverUrl && remoteCover) {
+        finalCoverUrl = await downloadAndPersistCover(remoteCover, track.id);
+      }
 
       const finalDuration = primaryAudio?.duration
         ? Math.round(primaryAudio.duration)

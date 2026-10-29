@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { refundCredits } from "@/lib/credits";
-import { deletePublicFile } from "@/lib/storage";
+import { deletePublicFile, downloadAndPersistAudio, downloadAndPersistCover } from "@/lib/storage";
 import { getSunoTaskStatus } from "@/lib/sunoService";
 
 /**
@@ -54,11 +54,19 @@ export async function GET(req, { params }) {
           const primaryAudio = Array.isArray(audioItems) ? audioItems[0] : audioItems;
 
           if (isSuccess && primaryAudio) {
-            const finalAudioUrl =
+            const rawAudioUrl =
               primaryAudio.audio_url || primaryAudio.stream_audio_url || track.audioUrl;
-            // Préserver la pochette uploadée par l'utilisateur si elle existe, sinon utiliser celle de Suno
-            const finalCoverUrl =
-              track.coverUrl || primaryAudio.image_url || primaryAudio.image_large_url || null;
+
+            // Rapatriement immédiat sur le stockage persistant du VPS
+            const finalAudioUrl = await downloadAndPersistAudio(rawAudioUrl, track.id);
+
+            // Préserver la pochette uploadée par l'utilisateur si elle existe, sinon rapatrier celle de Suno
+            let finalCoverUrl = track.coverUrl;
+            const remoteCover = primaryAudio.image_url || primaryAudio.image_large_url || null;
+            if (!finalCoverUrl && remoteCover) {
+              finalCoverUrl = await downloadAndPersistCover(remoteCover, track.id);
+            }
+
             const finalDuration = primaryAudio.duration
               ? Math.round(primaryAudio.duration)
               : track.duration;
@@ -132,6 +140,26 @@ export async function GET(req, { params }) {
           console.warn(`[API Track Polling] Avertissement Suno task ${sunoTaskId}:`, pollErr.message);
         }
       }
+    }
+
+    // Auto-rapatriement de secours si le morceau est COMPLETED mais pointe encore sur tempfile.aiquickdraw.com
+    if (
+      track.status === "COMPLETED" &&
+      track.audioUrl &&
+      track.audioUrl.includes("tempfile.aiquickdraw.com")
+    ) {
+      try {
+        const localAudioUrl = await downloadAndPersistAudio(track.audioUrl, track.id);
+        if (localAudioUrl !== track.audioUrl) {
+          track = await prisma.track.update({
+            where: { id: track.id },
+            data: { audioUrl: localAudioUrl },
+            include: {
+              user: { select: { id: true, name: true, image: true } },
+            },
+          });
+        }
+      } catch (_) {}
     }
 
     return NextResponse.json({

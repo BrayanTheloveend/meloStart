@@ -181,10 +181,116 @@ export function getPublicUrl(keyOrPath) {
   return `/${clean}`;
 }
 
+/**
+ * Télécharge un fichier audio distant (ex: Suno/QuickDraw tempfile CDN) et le persiste localement
+ * dans public/uploads/tracks/[trackId]/master.mp3.
+ *
+ * @param {string} remoteUrl URL distante à télécharger
+ * @param {string} trackId ID du morceau
+ * @returns {Promise<string>} URL locale persistée (/uploads/tracks/...) ou URL d'origine en cas d'échec
+ */
+export async function downloadAndPersistAudio(remoteUrl, trackId) {
+  if (!remoteUrl || (!remoteUrl.startsWith("http://") && !remoteUrl.startsWith("https://"))) {
+    return remoteUrl;
+  }
+
+  // Si déjà sous /uploads/, rien à faire
+  if (remoteUrl.startsWith("/uploads/") || remoteUrl.startsWith("uploads/")) {
+    return remoteUrl.startsWith("/") ? remoteUrl : `/${remoteUrl}`;
+  }
+
+  try {
+    console.log(`[Storage] 📥 Téléchargement audio distant pour la piste ${trackId}: ${remoteUrl}`);
+    const res = await fetch(remoteUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; pretymelo/1.0; +https://pretymelo.com)",
+      },
+      signal: AbortSignal.timeout(45000), // 45s max
+    });
+
+    if (!res.ok) {
+      console.warn(`[Storage] ⚠️ Échec téléchargement HTTP ${res.status}: ${remoteUrl}`);
+      return remoteUrl;
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (buffer.length < 1024) {
+      console.warn(`[Storage] ⚠️ Fichier audio trop petit (${buffer.length} octets).`);
+      return remoteUrl;
+    }
+
+    const contentType = res.headers.get("content-type") || "audio/mpeg";
+    let ext = "mp3";
+    if (contentType.includes("wav")) ext = "wav";
+    else if (contentType.includes("ogg")) ext = "ogg";
+
+    const saved = await saveBufferToPublic({
+      buffer,
+      key: `tracks/${trackId}/master.${ext}`,
+      contentType,
+    });
+
+    console.log(`[Storage] ✅ Piste audio ${trackId} rapatriée avec succès : ${saved.url} (${buffer.length} octets)`);
+    return saved.url;
+  } catch (err) {
+    console.error(`[Storage] ❌ Erreur lors du rapatriement de l'audio (${trackId}):`, err.message);
+    return remoteUrl;
+  }
+}
+
+/**
+ * Télécharge une image de pochette distante et la persiste localement.
+ *
+ * @param {string} remoteUrl
+ * @param {string} trackId
+ * @returns {Promise<string>}
+ */
+export async function downloadAndPersistCover(remoteUrl, trackId) {
+  if (!remoteUrl || (!remoteUrl.startsWith("http://") && !remoteUrl.startsWith("https://"))) {
+    return remoteUrl;
+  }
+  if (remoteUrl.startsWith("/uploads/") || remoteUrl.startsWith("uploads/")) {
+    return remoteUrl.startsWith("/") ? remoteUrl : `/${remoteUrl}`;
+  }
+
+  try {
+    const res = await fetch(remoteUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; pretymelo/1.0; +https://pretymelo.com)",
+      },
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!res.ok) return remoteUrl;
+
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    if (buffer.length < 500) return remoteUrl;
+
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+
+    const saved = await saveBufferToPublic({
+      buffer,
+      key: `tracks/${trackId}/cover.${ext}`,
+      contentType,
+    });
+
+    console.log(`[Storage] ✅ Pochette ${trackId} rapatriée avec succès : ${saved.url}`);
+    return saved.url;
+  } catch (_) {
+    return remoteUrl;
+  }
+}
+
 export default {
   saveBufferToPublic,
   deletePublicFile,
   getPublicUrl,
   getPlayableAudioBuffer,
   generateMelodyWavBuffer,
+  downloadAndPersistAudio,
+  downloadAndPersistCover,
 };

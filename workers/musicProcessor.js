@@ -123,7 +123,30 @@ async function processMusicJob(job) {
           [];
         const primary = Array.isArray(audioItems) ? audioItems[0] : audioItems;
 
-        const finalAudioUrl = primary?.audio_url || primary?.stream_audio_url;
+        const rawAudioUrl = primary?.audio_url || primary?.stream_audio_url;
+        let finalAudioUrl = rawAudioUrl;
+
+        // Rapatriement automatique du MP3 sur le stockage local du VPS
+        if (rawAudioUrl && (rawAudioUrl.startsWith("http://") || rawAudioUrl.startsWith("https://"))) {
+          try {
+            console.log(`[BullMQ Worker] 📥 Rapatriement du MP3 distant pour la piste ${trackId}...`);
+            const audioRes = await fetch(rawAudioUrl, { signal: AbortSignal.timeout(45000) });
+            if (audioRes.ok) {
+              const arrayBuffer = await audioRes.arrayBuffer();
+              const buffer = Buffer.from(arrayBuffer);
+              if (buffer.length > 1024) {
+                const targetDir = path.join(projectRoot, "public", "uploads", "tracks", String(trackId));
+                fs.mkdirSync(targetDir, { recursive: true });
+                fs.writeFileSync(path.join(targetDir, "master.mp3"), buffer);
+                finalAudioUrl = `/uploads/tracks/${trackId}/master.mp3`;
+                console.log(`[BullMQ Worker] ✅ Audio sauvegardé localement : ${finalAudioUrl}`);
+              }
+            }
+          } catch (dlErr) {
+            console.warn("[BullMQ Worker] ⚠️ Impossible de rapatrier l'audio distant, conservation de l'URL distante :", dlErr.message);
+          }
+        }
+
         // Priorité stricte à la cover uploadée si elle existe
         const finalCoverUrl = coverUrl || primary?.image_url || primary?.image_large_url || null;
         const finalDuration = primary?.duration ? Math.round(primary.duration) : duration;

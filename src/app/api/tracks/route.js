@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { downloadAndPersistAudio } from "@/lib/storage";
 
 /**
  * GET /api/tracks
@@ -93,6 +94,27 @@ export async function GET(req) {
       }),
       prisma.track.count({ where }),
     ]);
+
+    // Rapatriement automatique et immédiat sur le VPS des morceaux hébergés sur tempfile.aiquickdraw.com
+    const remoteTracks = tracks.filter(
+      (t) => t.audioUrl && t.audioUrl.includes("tempfile.aiquickdraw.com")
+    );
+    if (remoteTracks.length > 0) {
+      await Promise.all(
+        remoteTracks.map(async (t) => {
+          try {
+            const localUrl = await downloadAndPersistAudio(t.audioUrl, t.id);
+            if (localUrl !== t.audioUrl) {
+              await prisma.track.update({
+                where: { id: t.id },
+                data: { audioUrl: localUrl },
+              });
+              t.audioUrl = localUrl;
+            }
+          } catch (_) {}
+        })
+      );
+    }
 
     return NextResponse.json({
       success: true,

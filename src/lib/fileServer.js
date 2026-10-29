@@ -71,12 +71,9 @@ export function findTargetFile(segments) {
     path.join(cwd, "public", "uploads", ...withoutUploads),
     // 2. Si le chemin incluait déjà uploads sous public/
     path.join(cwd, "public", ...cleanSegments),
-    // 3. Dossier uploads à la racine
+    // 3. Dossier uploads à la racine du projet
     path.join(cwd, "uploads", ...withoutUploads),
-    // 4. Dossier public direct
-    path.join(cwd, "public", ...cleanSegments),
-    // 5. Chemin direct depuis la racine
-    path.join(cwd, ...cleanSegments),
+    path.join(cwd, "uploads", ...cleanSegments),
   ];
 
   for (const candidate of candidatePaths) {
@@ -154,6 +151,7 @@ export async function handleServeFile(req, rawPathSegments) {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
       "Access-Control-Allow-Headers": "Range, Content-Type",
+      "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
       "Cache-Control": isDownload ? "private, no-cache" : "public, max-age=86400, stale-while-revalidate=604800",
     };
 
@@ -237,6 +235,7 @@ export function handleOptions() {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
       "Access-Control-Allow-Headers": "Range, Content-Type",
+      "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
     },
   });
 }
