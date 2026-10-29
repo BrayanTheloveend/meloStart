@@ -3,7 +3,6 @@ import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductCredits, refundCredits, DEFAULT_TRACK_COST } from "@/lib/credits";
 import { generateSunoMusic } from "@/lib/sunoService";
-import { addTrackGenerationJob } from "@/lib/queue";
 
 /**
  * POST /api/tracks/generate
@@ -190,21 +189,9 @@ export async function POST(req) {
         },
       });
 
-      // Enregistrement non-bloquant du job dans la file BullMQ
-      await addTrackGenerationJob({
-        trackId: track.id,
-        userId,
-        title: derivedTitle,
-        prompt: prompt?.trim() || style?.trim(),
-        genre: style?.trim() || "Pop",
-        lyrics: lyrics?.trim(),
-        duration: Number(duration) || 180,
-        model,
-        sunoTaskId: sunoResult.taskId,
-        coverUrl: coverUrl?.trim() || null,
-      }).catch((queueErr) => {
-        console.warn("[BullMQ] Enregistrement job queue ignoré :", queueErr.message);
-      });
+      // Note: La synchronisation avec Suno AI est gérée directement et de façon fiable
+      // par le polling client (/api/tracks/[id]) et le webhook officiel (/api/webhooks/suno).
+      // BullMQ n'est plus nécessaire ici, évitant tout risque d'écrasement local.
 
       return NextResponse.json(
         {

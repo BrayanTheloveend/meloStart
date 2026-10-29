@@ -67,73 +67,7 @@ connection.on("error", (err) => {
   console.warn("⚠️  [BullMQ Worker] Erreur connexion Redis:", err.message);
 });
 
-/**
- * Génère un buffer audio WAV mélodieux pour le master final
- */
-function generateMelodyWavBuffer(durationSeconds = 8, baseFreq = 440) {
-  const sampleRate = 22050;
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const blockAlign = (numChannels * bitsPerSample) / 8;
-  const byteRate = sampleRate * blockAlign;
-  const totalSamples = sampleRate * durationSeconds;
-  const dataSize = totalSamples * blockAlign;
-  const buffer = Buffer.alloc(44 + dataSize);
 
-  // En-tête RIFF / WAVE
-  buffer.write("RIFF", 0);
-  buffer.writeUInt32LE(36 + dataSize, 4);
-  buffer.write("WAVE", 8);
-
-  // Sous-chunk fmt
-  buffer.write("fmt ", 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20); // PCM
-  buffer.writeUInt16LE(numChannels, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(byteRate, 28);
-  buffer.writeUInt16LE(blockAlign, 32);
-  buffer.writeUInt16LE(bitsPerSample, 34);
-
-  // Sous-chunk data
-  buffer.write("data", 36);
-  buffer.writeUInt32LE(dataSize, 40);
-
-  // Synthèse d'accords harmoniques
-  for (let i = 0; i < totalSamples; i++) {
-    const t = i / sampleRate;
-    const step = Math.floor(t / 1.5);
-    const chords = [1, 1.25, 1.33, 1.5]; // Progression harmonique
-    const root = baseFreq * (chords[step % chords.length] || 1);
-
-    const env = Math.sin((Math.PI * (i % (sampleRate * 1.5))) / (sampleRate * 1.5));
-    const s1 = Math.sin(2 * Math.PI * root * t);
-    const s2 = Math.sin(2 * Math.PI * (root * 1.25) * t) * 0.5;
-    const s3 = Math.sin(2 * Math.PI * (root * 1.5) * t) * 0.35;
-    const sample = Math.floor(((s1 + s2 + s3) / 1.85) * 14000 * Math.max(0, env));
-
-    buffer.writeInt16LE(sample, 44 + i * 2);
-  }
-
-  return buffer;
-}
-
-/**
- * Sauvegarde le master audio dans le dossier public/uploads
- */
-function saveAudioToPublicDisk(buffer, userId, trackId) {
-  const publicDir = path.join(projectRoot, "public");
-  const uploadsDir = path.join(publicDir, "uploads", "tracks", String(userId), String(trackId));
-
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  const fileName = "master.wav";
-  const filePath = path.join(uploadsDir, fileName);
-
-  fs.writeFileSync(filePath, buffer);
-
-  const publicUrl = `/uploads/tracks/${userId}/${trackId}/${fileName}`;
-  return { url: publicUrl, path: filePath };
-}
 
 /**
  * Traitement principal d'un job de génération audio avec BullMQ
@@ -154,9 +88,15 @@ async function processMusicJob(job) {
 
   console.log(`[BullMQ Worker] 🚀 Démarrage du job #${job.id} (Piste ID: ${trackId}, Task: ${sunoTaskId || "direct"})`);
 
-  const apiKey = process.env.SUNO_API_KEY || process.env.AI_MUSIC_API_KEY;
+  let apiKey = process.env.SUNO_API_KEY || process.env.AI_MUSIC_API_KEY;
+  if (!apiKey) {
+    try {
+      const dbKey = await prisma.systemSetting.findUnique({ where: { key: "suno_api_key" } });
+      if (dbKey?.value) apiKey = dbKey.value.trim();
+    } catch (_) {}
+  }
 
-  // CAS 1 : Tâche Suno AI officielle
+  // Traitement exclusif de la tâche Suno AI officielle
   if (sunoTaskId && apiKey) {
     await job.updateProgress(25);
     const cleanTaskId = sunoTaskId.replace(/^suno_/, "").trim();
@@ -230,51 +170,9 @@ async function processMusicJob(job) {
     throw new Error("Délai d'attente dépassé pour la réponse du cluster Suno.");
   }
 
-  // CAS 2 : Génération locale de secours (WAV mélodique)
-  await job.updateProgress(20);
-  await prisma.track.update({
-    where: { id: trackId },
-    data: { status: "PROCESSING", progress: 20 },
-  });
-
-  await new Promise((r) => setTimeout(r, 1000));
-  await job.updateProgress(50);
-  await prisma.track.update({
-    where: { id: trackId },
-    data: { status: "PROCESSING", progress: 50 },
-  });
-
-  await new Promise((r) => setTimeout(r, 1200));
-  await job.updateProgress(80);
-  await prisma.track.update({
-    where: { id: trackId },
-    data: { status: "PROCESSING", progress: 80 },
-  });
-
-  const baseFreq = genre === "Afrobeat" ? 432 : genre === "Lo-fi" ? 392 : 440;
-  const audioBuffer = generateMelodyWavBuffer(Math.min(Number(duration) || 30, 30), baseFreq);
-  const savedFile = saveAudioToPublicDisk(audioBuffer, userId, trackId);
-
-  const updatedTrack = await prisma.track.update({
-    where: { id: trackId },
-    data: {
-      status: "COMPLETED",
-      progress: 100,
-      duration: Number(duration) || 60,
-      audioUrl: savedFile.url,
-      coverUrl: coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
-      errorMessage: null,
-    },
-  });
-
-  await job.updateProgress(100);
-  console.log(`[BullMQ Worker] ✅ Job #${job.id} achevé avec succès ! Fichier : ${savedFile.url}`);
-  return {
-    success: true,
-    trackId: updatedTrack.id,
-    audioUrl: savedFile.url,
-    title: updatedTrack.title,
-  };
+  // Si Suno n'est pas joignable ou si aucune tâche valide n'est fournie, ne JAMAIS générer de faux WAV
+  console.warn(`[BullMQ Worker] Job #${job.id} ignoré : aucune tâche Suno valide ou clé manquante.`);
+  return { success: false, reason: "Tâche Suno non initialisée ou gérée directement par polling/webhook" };
 }
 
 // Instanciation du Worker BullMQ
