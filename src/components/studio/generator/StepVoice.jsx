@@ -62,7 +62,7 @@ export default function StepVoice({ vocalType, onSelect, onNext }) {
           onClick={onNext}
           _hover={{ transform: "translateY(-1px)", boxShadow: "0 8px 25px rgba(124, 58, 237, 0.4)" }}
           _active={{ transform: "scale(0.98)" }}
-          fontFamily="ui" fontWeight="700" fontSize="sm" minW="220px" h="12"
+          fontFamily="ui" fontSize="sm" minW="220px" h="12"
           boxShadow="0 4px 18px rgba(124, 58, 237, 0.3)"
         >
           Continuer

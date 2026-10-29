@@ -42,8 +42,121 @@ export const GENERATION_STAGES = [
  * @param {Function} [onProgress] Callback de progression (progress: number, label: string)
  * @returns {Promise<Object>} Morceau finalisé avec son URL audio réelle
  */
+export const PENDING_GENERATION_KEY = "pretymelo_pending_generation";
+
+export function savePendingGeneration(data) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      PENDING_GENERATION_KEY,
+      JSON.stringify({
+        ...data,
+        timestamp: Date.now(),
+      })
+    );
+  } catch (_) {}
+}
+
+export function getPendingGeneration() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(PENDING_GENERATION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Date.now() - (parsed.timestamp || 0) > 10 * 60 * 1000) {
+      clearPendingGeneration();
+      return null;
+    }
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
+export function clearPendingGeneration() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(PENDING_GENERATION_KEY);
+  } catch (_) {}
+}
+
+/**
+ * Poursuit le polling d'une piste existante jusqu'à complétion ou échec.
+ * Utilisé lors du lancement direct ET après un rechargement de page.
+ */
+export async function pollTrackUntilComplete(trackId, params = {}, onProgress) {
+  const genre = params.genre || params.style || "Afrobeat";
+  const vocalType = params.vocalType || "female";
+  const model = params.model || "V6";
+  const lyrics = params.lyrics || params.customLyrics || "";
+  const duration = params.duration || 180;
+
+  const maxAttempts = 75; // ~185s
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    attempts++;
+    await new Promise((r) => setTimeout(r, 2500));
+
+    const statusRes = await api.get(`/api/tracks/${trackId}`).catch(() => null);
+    const polledTrack = statusRes?.track;
+
+    if (polledTrack) {
+      if (polledTrack.status === "COMPLETED") {
+        if (onProgress) onProgress(100, "Morceau finalisé avec succès !");
+
+        const dur = Number(polledTrack.duration) || duration || 180;
+        const min = Math.floor(dur / 60);
+        const sec = String(Math.floor(dur % 60)).padStart(2, "0");
+
+        const finalCoverUrl = params.coverUrl || polledTrack.coverUrl || undefined;
+
+        return {
+          id: polledTrack.id,
+          title: polledTrack.title,
+          genre: polledTrack.genre || genre,
+          duration: dur,
+          length: `${min}:${sec}`,
+          seconds: dur,
+          vocalType: polledTrack.vocalType || vocalType,
+          audioUrl: polledTrack.audioUrl,
+          coverUrl: finalCoverUrl,
+          lyrics: polledTrack.lyrics || lyrics,
+          lyricsText: polledTrack.lyrics || lyrics,
+          createdAt: polledTrack.createdAt,
+          isFavorite: polledTrack.isFavorite,
+          isPublic: polledTrack.isPublic,
+          model: polledTrack.model || model,
+        };
+      }
+
+      if (polledTrack.status === "FAILED") {
+        throw new Error(
+          polledTrack.errorMessage ||
+          "La composition audio a échoué chez Suno AI. Vos crédits ont été remboursés."
+        );
+      }
+
+      const baseProgress = polledTrack.progress || 25;
+      const calculatedProgress = Math.min(
+        95,
+        Math.max(baseProgress, Math.round(attempts * 1.5) + 25)
+      );
+      const stage = [...GENERATION_STAGES].reverse().find((s) => calculatedProgress >= s.progress);
+
+      if (onProgress) {
+        onProgress(calculatedProgress, stage?.label || "Rendu audio studio en cours...");
+      }
+    }
+  }
+
+  throw new Error("Délai d'attente dépassé. La piste musicale continue son rendu sur les serveurs.");
+}
+
+/**
+ * Lance la génération d'un morceau via l'API backend pretymelo et suit son avancement en direct.
+ */
 export async function generateMusicWithAI(params = {}, onProgress) {
-  // Extraction compatible avec le wizard (genre, description, vocalType, occasion)
   const description = params.description || params.story || params.prompt || "";
   const genre = params.genre || params.style || "Afrobeat";
   const vocalType = params.vocalType || "female";
@@ -99,64 +212,23 @@ export async function generateMusicWithAI(params = {}, onProgress) {
     throw new Error(createRes?.error || "Échec de création du morceau.");
   }
 
+  // Enregistrement immédiat pour résister aux actualisations de page
+  savePendingGeneration({
+    trackId,
+    model,
+    genre,
+    musicStyle: genre,
+    vocalType,
+    coverUrl: params.coverUrl,
+    title,
+    lyrics,
+    params,
+  });
+
   if (onProgress) {
     onProgress(25, "Composition de la mélodie et des arrangements en cours...");
   }
 
-  // 2. Polling asynchrone régulier toutes les 2.5 secondes
-  const maxAttempts = 70; // 70 * 2.5s = 175s
-  let attempts = 0;
-
-  while (attempts < maxAttempts) {
-    attempts++;
-    await new Promise((r) => setTimeout(r, 2500));
-
-    const statusRes = await api.get(`/api/tracks/${trackId}`).catch(() => null);
-    const polledTrack = statusRes?.track;
-
-    if (polledTrack) {
-      if (polledTrack.status === "COMPLETED") {
-        if (onProgress) onProgress(100, "Morceau finalisé avec succès !");
-
-        const dur = Number(polledTrack.duration) || duration || 180;
-        const min = Math.floor(dur / 60);
-        const sec = String(Math.floor(dur % 60)).padStart(2, "0");
-
-        // L'URL de la cover uploadée par l'utilisateur est prioritaire sur celle générée par Suno
-        const finalCoverUrl = params.coverUrl || polledTrack.coverUrl || undefined;
-
-        return {
-          id: polledTrack.id,
-          title: polledTrack.title,
-          genre: polledTrack.genre || genre,
-          duration: dur,
-          length: `${min}:${sec}`,
-          seconds: dur,
-          vocalType: polledTrack.vocalType || vocalType,
-          audioUrl: polledTrack.audioUrl,
-          coverUrl: finalCoverUrl,
-          lyrics: polledTrack.lyrics || lyrics,
-          lyricsText: polledTrack.lyrics || lyrics,
-          createdAt: polledTrack.createdAt,
-          isFavorite: polledTrack.isFavorite,
-          model: polledTrack.model || model,
-        };
-      }
-
-      if (polledTrack.status === "FAILED") {
-        throw new Error(polledTrack.errorMessage || "La composition audio a échoué chez Suno AI. Vos crédits ont été remboursés.");
-      }
-
-      // Calcul de la progression visuelle
-      const baseProgress = polledTrack.progress || 25;
-      const calculatedProgress = Math.min(95, Math.max(baseProgress, Math.round(attempts * 1.5) + 25));
-      const stage = [...GENERATION_STAGES].reverse().find((s) => calculatedProgress >= s.progress);
-
-      if (onProgress) {
-        onProgress(calculatedProgress, stage?.label || "Rendu audio studio en cours...");
-      }
-    }
-  }
-
-  throw new Error("Délai d'attente dépassé. La piste musicale continue son rendu sur les serveurs.");
+  // 2. Polling asynchrone régulier
+  return pollTrackUntilComplete(trackId, params, onProgress);
 }

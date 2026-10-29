@@ -28,7 +28,7 @@ export const useCases = [
     text: "Une chanson festive avec le prénom, les anecdotes et les plus beaux souvenirs de la personne fêtée.",
     tag: "Célébration",
     genre: "Pop · Festif",
-    image: "/assets/events/6.jpeg",
+    image: "/assets/usecases/6.jpg",
     alt: "Gâteau d'anniversaire avec bougies allumées",
   },
   {
@@ -36,7 +36,7 @@ export const useCases = [
     text: "Une musique d'entrée inoubliable ou une déclaration chantée sur mesure pour les mariés.",
     tag: "Union & Amour",
     genre: "Ballade · Émotion",
-    image: "/assets/events/5.jpeg",
+    image: "/assets/usecases/5.jpeg",
     alt: "Couple de mariés souriant lors de la cérémonie",
   },
   {
@@ -44,7 +44,7 @@ export const useCases = [
     text: "Des jingles mémorables et des fonds sonores libres de droits pour sublimer vos créations audiovisuelles.",
     tag: "Créateurs & Médias",
     genre: "Lo-fi · Groove",
-    image: "/assets/events/2.jpeg",
+    image: "/assets/usecases/4.webp",
     alt: "Microphone de studio et casque audio pour podcast",
   },
   {
@@ -52,7 +52,7 @@ export const useCases = [
     text: "Une signature sonore moderne et percutante pour renforcer l'identité de vos spots et réseaux sociaux.",
     tag: "Business & Ads",
     genre: "Électro · Percutant",
-    image: "/assets/events/3.jpeg",
+    image: "/assets/usecases/7.webp",
     alt: "Tournage publicitaire et équipe créative",
   },
   {
@@ -60,7 +60,7 @@ export const useCases = [
     text: "Des ambiances captivantes et des boucles musicales immersives calibrées pour chaque univers interactif.",
     tag: "Jeux & Apps",
     genre: "Synthwave · Épique",
-    image: "/assets/events/1.jpeg",
+    image: "/assets/usecases/1.jpg",
     alt: "Setup gaming moderne avec lumières néon",
   },
   {
@@ -68,7 +68,7 @@ export const useCases = [
     text: "Composez une mélodie pleine de tendresse et d'émotion pour marquer les grandes étapes familiales.",
     tag: "Douceur & Famille",
     genre: "Acoustique · Douceur",
-    image: "/assets/events/4.jpeg",
+    image: "/assets/usecases/2.jpg",
     alt: "Bébé apaisé dans une couverture douce",
   },
 ];

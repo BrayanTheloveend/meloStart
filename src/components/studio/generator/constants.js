@@ -57,9 +57,9 @@ export const STRUCTURE_TAGS = [
   "[Intro]", "[Verse 1]", "[Verse 2]", "[Chorus]", "[Bridge]", "[Drop]", "[Outro]",
 ];
 
-// Utilitaire : URL du drapeau via Flagpedia CDN
-export const flagUrl = (code, size = "40x30") =>
-  `https://flagcdn.com/${size}/${code}.png`;
+// Utilitaire : URL du drapeau via Flagpedia CDN (flagcdn.com)
+export const flagUrl = (code, size = "48x36") =>
+  `https://flagcdn.com/${size}/${String(code || "").toLowerCase()}.png`;
 
 // Utilitaire : parse paroles style Spotify
 export function parseSpotifyLyrics(rawText) {

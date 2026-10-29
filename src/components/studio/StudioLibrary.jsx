@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Badge,
   Box,
@@ -32,6 +32,7 @@ import {
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
 import { downloadTrackAudio } from "@/lib/downloadTrack";
+import { LucideMoreVertical } from "lucide-react";
 
 export default function StudioLibrary({
   library = [],
@@ -49,6 +50,15 @@ export default function StudioLibrary({
 }) {
   const [search, setSearch] = useState("");
   const [filterGenre, setFilterGenre] = useState("all");
+  const [openMenuTrackId, setOpenMenuTrackId] = useState(null);
+
+  // Fermer le menu d'actions quand on clique en dehors
+  useEffect(() => {
+    if (!openMenuTrackId) return;
+    const handleClose = () => setOpenMenuTrackId(null);
+    window.addEventListener("click", handleClose);
+    return () => window.removeEventListener("click", handleClose);
+  }, [openMenuTrackId]);
 
   const handleDownloadTrack = (track) => {
     if (!track) return;
@@ -275,24 +285,27 @@ export default function StudioLibrary({
                   </Box>
                 
                   <Stack gap="0" flex="1" minW="0">
-                    <HStack gap="2" wrap="wrap">
+                    <Flex gap="2" wrap="wrap">
                       <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="ink.900" truncate>
                         {track.title}
                       </Text>
-                      {track.isFavorite && <Text color="red.500" fontSize="xs">❤️</Text>}
-                      {track.isPublic ? (
-                        <Badge size="xs" colorPalette="green" variant="subtle" rounded="full" px="2" title="Visible sur la page d'accueil">
-                          🌐 Public
-                        </Badge>
-                      ) : (
-                        <Badge size="xs" colorPalette="gray" variant="subtle" rounded="full" px="2" title="Privé (masqué de l'accueil)">
-                          🔒 Privé
-                        </Badge>
-                      )}
-                    </HStack>
-                    <Text fontSize="xs" color="ink.500" truncate>
-                      {track.meta || track.genre}
-                    </Text>
+                     
+                      </Flex>
+                      <HStack>
+                        <Text fontSize="xs" color="ink.500" truncate>
+                          {track.meta || track.genre}
+                        </Text>
+                        {track.isPublic ? (
+                            <Badge size="xs" w={'min-content'} colorPalette="green" variant="subtle" rounded="full" px="2" title="Visible sur la page d'accueil">
+                              Public
+                            </Badge>
+                          ) : (
+                            <Badge size="xs" w={'min-content'} colorPalette="gray" variant="subtle" rounded="full" px="2" title="Privé (masqué de l'accueil)">
+                              Privé
+                            </Badge>
+                          )}
+
+                        </HStack>
                   </Stack>
                 </HStack>
 
@@ -341,47 +354,119 @@ export default function StudioLibrary({
                       {trackPlaying ? <LuPause size={16} /> : <LuPlay size={16} />}
                     </IconButton>
 
-                  <IconButton
-                    size="xs"
-                    rounded="full"
-                    variant="ghost"
-                    onClick={() => downloadTrackAudio(track)}
-                    title="Télécharger l'audio"
-                  >
-                    <LuDownload size={13} />
-                  </IconButton>
-
-                  {onTogglePublic && (
+                  {/* Menu déroulant compact d'actions */}
+                  <Box pos="relative">
                     <IconButton
-                      aria-label={track.isPublic ? "Rendre privé (masquer de l'accueil)" : "Rendre public (afficher sur l'accueil)"}
-                      title={
-                        track.isPublic
-                          ? "Public : Visible sur l'accueil (cliquer pour masquer)"
-                          : "Privé : Masqué de l'accueil (cliquer pour afficher sur l'accueil)"
-                      }
+                      aria-label="Plus d'actions"
                       size="xs"
                       variant="ghost"
                       rounded="full"
-                      color={track.isPublic ? "green.600" : "ink.400"}
-                      _hover={{ color: track.isPublic ? "red.500" : "green.600" }}
-                      onClick={() => onTogglePublic(track.id)}
+                      color="ink.500"
+                      _hover={{ bg: "paper.200", color: "ink.900" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuTrackId((prev) => (prev === track.id ? null : track.id));
+                      }}
+                      title="Options"
+                      flexShrink={0}
                     >
-                      {track.isPublic ? <LuGlobe size={14} /> : <LuLock size={14} />}
+                      <LucideMoreVertical size={15} />
                     </IconButton>
-                  )}
-                    {onDeleteTrack && (
-                      <IconButton
-                        aria-label="Supprimer"
-                        size="sm"
-                        variant="ghost"
-                        rounded="full"
-                        color="ink.400"
-                        _hover={{ color: "red.500" }}
-                        onClick={() => handleDeleteTrack(track)}
+
+                    {openMenuTrackId === track.id && (
+                      <Box
+                        pos="absolute"
+                        right="0"
+                        top="calc(100% + 4px)"
+                        w="200px"
+                        bg="white"
+                        borderWidth="1px"
+                        borderColor="paper.200"
+                        rounded="xl"
+                        boxShadow="0 12px 28px -4px rgba(0,0,0,0.12), 0 4px 10px -2px rgba(0,0,0,0.06)"
+                        py="1.5"
+                        zIndex="50"
+                        fontFamily="ui"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <LuTrash2 size={16} />
-                      </IconButton>
-                    )} 
+                        {/* Télécharger */}
+                        <Box
+                          as="button"
+                          w="100%"
+                          display="flex"
+                          alignItems="center"
+                          gap="2.5"
+                          px="3.5"
+                          py="2"
+                          fontSize="xs"
+                          fontWeight="600"
+                          color="ink.700"
+                          _hover={{ bg: "paper.100", color: "brand.violet" }}
+                          transition="all 0.15s ease"
+                          onClick={() => {
+                            setOpenMenuTrackId(null);
+                            handleDownloadTrack(track);
+                          }}
+                        >
+                          <LuDownload size={14} />
+                          <Text>Télécharger MP3</Text>
+                        </Box>
+
+                        {/* Rendre Public / Privé */}
+                        {onTogglePublic && (
+                          <Box
+                            as="button"
+                            w="100%"
+                            display="flex"
+                            alignItems="center"
+                            gap="2.5"
+                            px="3.5"
+                            py="2"
+                            fontSize="xs"
+                            fontWeight="600"
+                            color={track.isPublic ? "green.700" : "ink.700"}
+                            _hover={{ bg: "paper.100", color: track.isPublic ? "red.600" : "green.600" }}
+                            transition="all 0.15s ease"
+                            onClick={() => {
+                              setOpenMenuTrackId(null);
+                              onTogglePublic(track.id);
+                            }}
+                          >
+                            {track.isPublic ? <LuLock size={14} /> : <LuGlobe size={14} />}
+                            <Text>{track.isPublic ? "Rendre privé" : "Rendre public (accueil)"}</Text>
+                          </Box>
+                        )}
+
+                        {/* Supprimer */}
+                        {onDeleteTrack && (
+                          <>
+                            <Box my="1" borderTopWidth="1px" borderColor="paper.150" />
+                            <Box
+                              as="button"
+                              w="100%"
+                              display="flex"
+                              alignItems="center"
+                              gap="2.5"
+                              px="3.5"
+                              py="2"
+                              fontSize="xs"
+                              fontWeight="600"
+                              color="red.600"
+                              _hover={{ bg: "red.50" }}
+                              transition="all 0.15s ease"
+                              onClick={() => {
+                                setOpenMenuTrackId(null);
+                                handleDeleteTrack(track);
+                              }}
+                            >
+                              <LuTrash2 size={14} />
+                              <Text>Supprimer</Text>
+                            </Box>
+                          </>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
                 </HStack>
 
               </Flex>

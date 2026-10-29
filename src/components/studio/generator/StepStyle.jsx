@@ -37,7 +37,7 @@ export default function StepStyle({ musicStyle, onSelect, onNext }) {
               transition="all 0.2s" cursor="pointer" textAlign="center"
             >
               <Image src={s.icon} alt={s.title} w="35px" h="35px" mx="auto" />
-              <Text fontFamily="ui" fontWeight="700" fontSize="2xs"
+              <Text fontFamily="ui" fontSize="2xs"
                 color={isSelected ? "brand.violetDeep" : "ink.800"} truncate>
                 {s.title}
               </Text>

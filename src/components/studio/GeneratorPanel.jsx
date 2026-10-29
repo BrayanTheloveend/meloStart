@@ -8,7 +8,13 @@ import {
 } from "@chakra-ui/react";
 
 // Services & utilitaires
-import { generateMusicWithAI, NOTES_PER_SONG } from "@/services/musicAiApi";
+import {
+  generateMusicWithAI,
+  pollTrackUntilComplete,
+  getPendingGeneration,
+  clearPendingGeneration,
+  NOTES_PER_SONG,
+} from "@/services/musicAiApi";
 
 // Constantes partagées
 import { OCCASIONS, VOICE_TYPES, MUSIC_STYLES, LANGUAGES } from "./generator/constants";
@@ -91,6 +97,56 @@ export default function GeneratorPanel({
       if (initialData.vocalType === "instrumental") setInstrumental(true);
     }
   }, [initialData]);
+
+  // ── Reprise automatique si l'utilisateur a actualisé la page pendant la génération ──
+  useEffect(() => {
+    const pending = getPendingGeneration();
+    if (!pending?.trackId) return;
+
+    setStatus("generating");
+    setProgress(30);
+    setStepLabel("Reprise du suivi de votre composition...");
+    if (pending.model) setModel(pending.model);
+    if (pending.musicStyle) setMusicStyle(pending.musicStyle);
+    if (pending.title) setCustomTitle(pending.title);
+    if (pending.lyrics) setLyrics(pending.lyrics);
+    if (pending.coverUrl) setCoverUrl(pending.coverUrl);
+
+    pollTrackUntilComplete(pending.trackId, pending.params || {}, (p, label) => {
+      setProgress(p);
+      setStepLabel(label);
+    })
+      .then((result) => {
+        clearPendingGeneration();
+        const enrichedResult = result
+          ? { ...result, coverUrl: pending.coverUrl || result.coverUrl || undefined }
+          : result;
+        setGeneratedTrack(enrichedResult);
+        setStatus("completed");
+        if (onTrackCreated) onTrackCreated(enrichedResult);
+      })
+      .catch((err) => {
+        console.error("[GeneratorPanel] Erreur lors de la reprise :", err);
+        clearPendingGeneration();
+        setStatus("error");
+        setWasRefunded(true);
+        setGenerationError(err?.message || "La composition n'a pas pu être finalisée.");
+      });
+  }, []);
+
+  // ── Avertissement navigateur pour empêcher un rechargement accidentel ──
+  useEffect(() => {
+    if (status !== "generating") return;
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = "La composition de votre chanson est en cours. Vos données sont préservées, mais nous vous conseillons de rester sur cette page.";
+      return e.returnValue;
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [status]);
 
   // ── Navigation du Stepper ────────────────────────────
   const handlePrevStep = () => {
@@ -200,12 +256,14 @@ export default function GeneratorPanel({
         ? { ...result, coverUrl: coverUrl || result.coverUrl || undefined }
         : result;
 
+      clearPendingGeneration();
       setGeneratedTrack(enrichedResult);
       setStatus("completed");
 
       if (onTrackCreated) onTrackCreated(enrichedResult);
     } catch (err) {
       console.error("[GeneratorPanel] Erreur de génération :", err);
+      clearPendingGeneration();
       setStatus("error");
       setWasRefunded(true);
 
@@ -221,6 +279,7 @@ export default function GeneratorPanel({
   };
 
   const handleResetWizard = () => {
+    clearPendingGeneration();
     setStatus("idle");
     setCurrentStep(1);
     setGeneratedTrack(null);

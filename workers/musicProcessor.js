@@ -136,45 +136,125 @@ function saveAudioToPublicDisk(buffer, userId, trackId) {
 }
 
 /**
- * Traitement principal d'un job de génération audio
+ * Traitement principal d'un job de génération audio avec BullMQ
+ * Prend en charge les tâches Suno AI en direct et le mode local de secours.
  */
 async function processMusicJob(job) {
-  const { trackId, userId, prompt, genre, duration = 60, title, model = "V6" } = job.data;
-  console.log(`[BullMQ Worker] 🚀 Démarrage du job #${job.id} (Piste ID: ${trackId}, Modèle: ${model})`);
+  const {
+    trackId,
+    userId,
+    prompt,
+    genre,
+    duration = 180,
+    title,
+    model = "V6",
+    sunoTaskId,
+    coverUrl,
+  } = job.data;
 
-  // Étape 1 : Initialisation & Analyse des paramètres
+  console.log(`[BullMQ Worker] 🚀 Démarrage du job #${job.id} (Piste ID: ${trackId}, Task: ${sunoTaskId || "direct"})`);
+
+  const apiKey = process.env.SUNO_API_KEY || process.env.AI_MUSIC_API_KEY;
+
+  // CAS 1 : Tâche Suno AI officielle
+  if (sunoTaskId && apiKey) {
+    await job.updateProgress(25);
+    const cleanTaskId = sunoTaskId.replace(/^suno_/, "").trim();
+    const maxAttempts = 70;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      await new Promise((r) => setTimeout(r, 2500));
+
+      const res = await fetch(`https://api.sunoapi.org/api/v1/generate/record-info?taskId=${encodeURIComponent(cleanTaskId)}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      }).catch(() => null);
+
+      const json = await res?.json().catch(() => null);
+      const sunoData = json?.data;
+
+      if (sunoData?.status === "SUCCESS") {
+        const audioItems =
+          sunoData.response?.sunoData ||
+          sunoData.response?.data ||
+          sunoData.sunoData ||
+          sunoData.data ||
+          [];
+        const primary = Array.isArray(audioItems) ? audioItems[0] : audioItems;
+
+        const finalAudioUrl = primary?.audio_url || primary?.stream_audio_url;
+        // Priorité stricte à la cover uploadée si elle existe
+        const finalCoverUrl = coverUrl || primary?.image_url || primary?.image_large_url || null;
+        const finalDuration = primary?.duration ? Math.round(primary.duration) : duration;
+        const finalTitle = title || primary?.title;
+        const finalLyrics = primary?.prompt || null;
+
+        const updatedTrack = await prisma.track.update({
+          where: { id: trackId },
+          data: {
+            status: "COMPLETED",
+            progress: 100,
+            audioUrl: finalAudioUrl,
+            coverUrl: finalCoverUrl,
+            duration: finalDuration,
+            title: finalTitle,
+            lyrics: finalLyrics,
+            errorMessage: null,
+          },
+        });
+
+        await job.updateProgress(100);
+        console.log(`[BullMQ Worker] ✅ Morceau Suno finalisé avec succès pour la piste ${trackId}`);
+        return {
+          success: true,
+          trackId: updatedTrack.id,
+          audioUrl: finalAudioUrl,
+          title: updatedTrack.title,
+        };
+      }
+
+      if (["FAILED", "fail", "CREATE_TASK_FAILED", "GENERATE_AUDIO_FAILED"].includes(sunoData?.status)) {
+        throw new Error(sunoData?.errorMessage || sunoData?.msg || "Échec rapporté par les serveurs Suno AI.");
+      }
+
+      if (sunoData?.status === "FIRST_SUCCESS") {
+        await job.updateProgress(80);
+        await prisma.track.update({ where: { id: trackId }, data: { progress: 80 } }).catch(() => {});
+      } else if (sunoData?.status === "TEXT_SUCCESS") {
+        await job.updateProgress(45);
+        await prisma.track.update({ where: { id: trackId }, data: { progress: 45 } }).catch(() => {});
+      }
+    }
+
+    throw new Error("Délai d'attente dépassé pour la réponse du cluster Suno.");
+  }
+
+  // CAS 2 : Génération locale de secours (WAV mélodique)
   await job.updateProgress(20);
   await prisma.track.update({
     where: { id: trackId },
     data: { status: "PROCESSING", progress: 20 },
   });
 
-  await new Promise((r) => setTimeout(r, 1200));
-
-  // Étape 2 : Écriture des accords, arrangement et instrumentation
+  await new Promise((r) => setTimeout(r, 1000));
   await job.updateProgress(50);
   await prisma.track.update({
     where: { id: trackId },
     data: { status: "PROCESSING", progress: 50 },
   });
 
-  await new Promise((r) => setTimeout(r, 1500));
-
-  // Étape 3 : Synthèse vocale & Mastering
+  await new Promise((r) => setTimeout(r, 1200));
   await job.updateProgress(80);
   await prisma.track.update({
     where: { id: trackId },
     data: { status: "PROCESSING", progress: 80 },
   });
 
-  await new Promise((r) => setTimeout(r, 1200));
-
-  // Étape 4 : Rendu du master audio et persistance sur disque
   const baseFreq = genre === "Afrobeat" ? 432 : genre === "Lo-fi" ? 392 : 440;
   const audioBuffer = generateMelodyWavBuffer(Math.min(Number(duration) || 30, 30), baseFreq);
   const savedFile = saveAudioToPublicDisk(audioBuffer, userId, trackId);
 
-  // Finalisation dans PostgreSQL
   const updatedTrack = await prisma.track.update({
     where: { id: trackId },
     data: {
@@ -182,13 +262,12 @@ async function processMusicJob(job) {
       progress: 100,
       duration: Number(duration) || 60,
       audioUrl: savedFile.url,
-      coverUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
+      coverUrl: coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
       errorMessage: null,
     },
   });
 
   await job.updateProgress(100);
-
   console.log(`[BullMQ Worker] ✅ Job #${job.id} achevé avec succès ! Fichier : ${savedFile.url}`);
   return {
     success: true,

@@ -3,6 +3,7 @@ import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { deductCredits, refundCredits, DEFAULT_TRACK_COST } from "@/lib/credits";
 import { generateSunoMusic } from "@/lib/sunoService";
+import { addTrackGenerationJob } from "@/lib/queue";
 
 /**
  * POST /api/tracks/generate
@@ -187,6 +188,22 @@ export async function POST(req) {
           status: "PROCESSING",
           progress: 20,
         },
+      });
+
+      // Enregistrement non-bloquant du job dans la file BullMQ
+      await addTrackGenerationJob({
+        trackId: track.id,
+        userId,
+        title: derivedTitle,
+        prompt: prompt?.trim() || style?.trim(),
+        genre: style?.trim() || "Pop",
+        lyrics: lyrics?.trim(),
+        duration: Number(duration) || 180,
+        model,
+        sunoTaskId: sunoResult.taskId,
+        coverUrl: coverUrl?.trim() || null,
+      }).catch((queueErr) => {
+        console.warn("[BullMQ] Enregistrement job queue ignoré :", queueErr.message);
       });
 
       return NextResponse.json(

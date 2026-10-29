@@ -42,7 +42,7 @@ export default function StepConfirm({
           Prêt à composer votre musique ?
         </Text>
         <Text fontSize="sm" color="slate.500">
-          Vérifiez vos choix avant de lancer la création avec Suno AI
+          Vérifiez vos choix avant de lancer la création
         </Text>
       </Stack>
 
@@ -90,11 +90,14 @@ export default function StepConfirm({
             <Text fontSize="xs" color="slate.500">Langue</Text>
             <HStack gap="1.5">
               {lang && (
-                <Box rounded="xs" overflow="hidden" boxShadow="0 1px 3px rgba(0,0,0,0.18)" lineHeight="0" flexShrink={0}>
-                  <img
-                    src={flagUrl(lang.code, "20x15")}
-                    srcSet={`${flagUrl(lang.code, "40x30")} 2x`}
-                    alt={lang.country} width={20} height={15} style={{ display: "block" }}
+                <Box rounded="xs" overflow="hidden" lineHeight="0" flexShrink={0}>
+                  <Image
+                    src={`https://flagcdn.com/w320/${lang?.code}.png`}
+                    srcSet={`https://flagcdn.com/w320/${lang?.code}.png`}
+                    alt={lang?.country}
+                    rounded={'full'}
+                    w={5}
+                    h={5}
                   />
                 </Box>
               )}
@@ -115,7 +118,7 @@ export default function StepConfirm({
                 <Text fontSize="xs" fontWeight="700" color="purple.700">Personnalisée</Text>
               </HStack>
             ) : (
-              <Text fontSize="xs" color="slate.500">Générée par Suno</Text>
+              <Text fontSize="xs" color="slate.500">Automatique</Text>
             )}
           </Flex>
 
@@ -256,14 +259,14 @@ export default function StepConfirm({
       </Box>
 
       {/* Coût en Notes */}
-      <HStack
+      {/* <HStack
         justify="center" gap="2" p="3" rounded="2xl"
         bg="purple.50" borderWidth="1px" borderColor="purple.200" w="full"
       >
         <Text fontWeight="700" fontSize="xs" color="purple.800">
           Coût de composition : <b>2 Notes</b> (Votre solde actuel : {notes} Notes)
         </Text>
-      </HStack>
+      </HStack> */}
 
       {/* Bouton lancement */}
       <Box pt="2">
@@ -274,7 +277,7 @@ export default function StepConfirm({
             onClick={onLaunch}
             _hover={{ bg: "purple.700", transform: "translateY(-1px)" }}
             _active={{ transform: "scale(0.98)" }}
-            fontWeight="700" fontSize="sm" minW="260px" h="12"
+            fontSize="sm" minW="260px" h="12"
             boxShadow="0 4px 14px rgba(124, 58, 237, 0.3)"
           >
             Lancer la composition (2 Notes)

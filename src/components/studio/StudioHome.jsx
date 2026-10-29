@@ -223,7 +223,7 @@ export default function StudioHome({
                   px={{base: '1', sm: '4'}}
                   bg={isCurrent ? "brand.violetTint" : "paper.50"}
                   borderBottomWidth="0.1px"
-                  borderColor={isCurrent ? "brand.violetDeep" : "paper.200"}
+                  // borderColor={isCurrent ? "brand.violetDeep" : "paper.200"}
                   _hover={{ borderColor: isCurrent ? "brand.violetDeep" : "paper.400", bg: isCurrent ? "brand.violetTint" : "paper.0" }}
                   transition="all 0.2s"
                 >

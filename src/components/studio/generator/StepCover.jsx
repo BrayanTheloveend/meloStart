@@ -58,9 +58,9 @@ export default function StepCover({
             Optionnel
           </Badge>
         </HStack>
-        <Text fontSize="sm" color="slate.500">
+        {/* <Text fontSize="sm" color="slate.500">
           Illustrez votre morceau avec une photo ou laissez Suno en créer une
-        </Text>
+        </Text> */}
       </Stack>
 
       {/* Input de fichier masqué */}
@@ -134,12 +134,12 @@ export default function StepCover({
             ) : (
               <Box
                 px="3" py="1" rounded="full" bg="slate.100" color="slate.700"
-                fontSize="xs" fontWeight="700" letterSpacing="0.04em"
+                fontSize="sm" 
               >
-                CLIQUEZ POUR CHOISIR UNE PHOTO
+                Cliquez pour choisir une photo
               </Box>
             )}
-            <Text fontSize="sm" fontWeight="700" color="slate.900">
+            <Text fontSize="sm"  color="slate.800">
               {isUploading ? "Téléversement en cours..." : "Téléverser depuis cet appareil"}
             </Text>
             <Text fontSize="xs" color="slate.500" maxW="320px">
@@ -154,7 +154,7 @@ export default function StepCover({
       )}
 
       <Text fontSize="xs" color="slate.400" textAlign="center">
-        Si vous passez cette étape, Suno générera automatiquement un visuel studio.
+        Si vous passez cette étape, nous généreront automatiquement un visuel studio.
       </Text>
 
       <Stack gap="2" pt="2" align="center">
@@ -164,14 +164,12 @@ export default function StepCover({
           onClick={onNext}
           _hover={{ bg: "purple.700", transform: "translateY(-1px)" }}
           _active={{ transform: "scale(0.98)" }}
-          fontWeight="700" fontSize="sm" minW="240px" h="12"
+           fontSize="sm" minW="240px" h="12"
           boxShadow="0 4px 14px rgba(124, 58, 237, 0.25)"
         >
           Continuer vers la vérification
         </Button>
-        <Button size="xs" variant="ghost" color="slate.500" onClick={onSkip} fontSize="xs">
-          Passer cette étape (pochette automatique Suno)
-        </Button>
+       
       </Stack>
     </Stack>
   );
