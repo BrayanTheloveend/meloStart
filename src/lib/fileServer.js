@@ -71,8 +71,6 @@ export function findTargetFile(segments) {
     path.join(cwd, "public", "uploads", ...withoutUploads),
     // 2. Si le chemin incluait déjà uploads sous public/
     path.join(cwd, "public", ...cleanSegments),
-    // 3. Dossier uploads à la racine
-    path.join(cwd, "uploads", ...withoutUploads),
   ];
 
   for (const candidate of candidatePaths) {

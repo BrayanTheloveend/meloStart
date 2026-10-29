@@ -36,8 +36,8 @@ import { accent } from "@/theme/system";
 const NAV_ITEMS = [
   { id: "home", href: "/studio", icon: LuHouse, label: "Accueil", desktopLabel: "Accueil", match: (p) => p === "/studio" },
   // { id: "explorer", href: "/explorer", icon: LuCompass, label: "Explorer", desktopLabel: "Explorer", match: (p) => p.startsWith("/explorer") },
-  { id: "create", href: "/studio/create", icon: LuWandSparkles, label: "Créer", desktopLabel: "Créer (2 Notes)", isCenterAction: true, match: (p) => p.startsWith("/studio/create") || p.startsWith("/studio/creer") },
-  { id: "library", href: "/studio/library", icon: LuLibrary, label: "Bibliothèque", desktopLabel: "Bibliothèque", match: (p) => p.startsWith("/studio/library") || p.startsWith("/studio/bibliotheque") },
+  { id: "create", href: "/studio/create", icon: LuWandSparkles, label: "Créer", desktopLabel: "Créer (2 Notes)", isCenterAction: true, match: (p) => p.startsWith("/studio/create") },
+  { id: "library", href: "/studio/library", icon: LuLibrary, label: "Bibliothèque", desktopLabel: "Bibliothèque", match: (p) => p.startsWith("/studio/library") },
   { id: "profile", href: "/studio/profil", icon: LuUser, label: "Profil", desktopLabel: "Profil", match: (p) => p.startsWith("/studio/profil") },
 ];
 
@@ -86,7 +86,7 @@ function StudioLayoutContent({ children }) {
     );
   }
 
-  const isCreationWorkflow = pathname.startsWith("/studio/create") || pathname.startsWith("/studio/creer");
+  const isCreationWorkflow = pathname.startsWith("/studio/create");
   const isRechargeWorkflow = pathname === "/studio/recharge";
   const userName = session?.user?.name || "Créateur pretymelo";
   const userImage = session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
