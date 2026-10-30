@@ -953,6 +953,7 @@ export default function Showcase() {
                 <Button
                   asChild
                   size="lg"
+                  p={6}
                   rounded="full"
                   w="100%"
                   mt="4"
