@@ -124,7 +124,7 @@ export default function Header() {
                     size="sm"
                     rounded="full"
                     p={0}
-                    pr={1}
+                    pr={{md: 1, base: 'inherit'}}
                     borderWidth="0.9px"
                     borderColor={userMenuOpen ? "brand.violetDeep" : "paper.200"}
                     _hover={{ borderColor: "brand.violetDeep", bg: "paper.100" }}
