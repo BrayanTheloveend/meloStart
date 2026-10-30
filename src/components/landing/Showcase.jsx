@@ -864,7 +864,7 @@ export default function Showcase() {
                           scrollSnapAlign="start"
                           gap="3"
                           p="2.5"
-                          px="3"
+                          px="2"
                           rounded="2xl"
                           cursor="pointer"
                           transition="all 0.2s ease"
@@ -885,7 +885,7 @@ export default function Showcase() {
                           {/* Vignette miniature */}
                           <Box
                             pos="relative"
-                            boxSize="11"
+                            boxSize="12"
                             rounded="xl"
                             overflow="hidden"
                             flexShrink={0}
