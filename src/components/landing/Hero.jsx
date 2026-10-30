@@ -120,7 +120,7 @@ export default function Hero({ initialUsers = null, initialTotalCount = null }) 
             </Button>
 
             {/* Preuve sociale (derniers utilisateurs inscrits avec AvatarGroup Chakra UI v3) */}
-            <HStack gap="3" display={{md: 'inline-flex', base: 'none'}}>
+            <HStack gap="3">
               <AvatarGroup size="sm">
                 {displayUsers.map((user) => {
                   const displayName = user.name || "Créateur";
@@ -173,55 +173,7 @@ export default function Hero({ initialUsers = null, initialTotalCount = null }) 
 
         <Image src={'/assets/mock13.png'} width={{md: "70%", base: '100%'}} mt={10} alt="mock" />
 
-        {/* Preuve sociale (derniers utilisateurs inscrits avec AvatarGroup Chakra UI v3) */}
-            <HStack gap="3" display={{md: 'none', base: 'inline-flex'}} mt={10}>
-              <AvatarGroup size="sm">
-                {displayUsers.map((user) => {
-                  const displayName = user.name || "Créateur";
-                  return (
-                    <Avatar.Root
-                      key={user.id}
-                      size="sm"
-                      borderWidth="2px"
-                      borderColor="paper.0"
-                      color={accent[pickPalette(displayName)]}
-                    >
-                      <Avatar.Fallback name={displayName} />
-                      {user.image && (
-                        <Avatar.Image src={user.image} alt={displayName} />
-                      )}
-                    </Avatar.Root>
-                  );
-                })}
-                {remainingCount > 0 && (
-                  <Avatar.Root
-                    size="sm"
-                    borderWidth="2px"
-                    borderColor="paper.0"
-                    bg="paper.200"
-                  >
-                    <Avatar.Fallback fontSize="xs" fontWeight="700" color="ink.700">
-                      +{remainingCount > 999 ? formatMetric(remainingCount, { uppercaseK: false }) : remainingCount}
-                    </Avatar.Fallback>
-                  </Avatar.Root>
-                )}
-              </AvatarGroup>
-
-              <Stack gap="0" textAlign="left">
-                <HStack gap="0.5" color="#facc15">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <LuStar key={i} size={14} fill="currentColor" />
-                  ))}
-                </HStack>
-                <Text fontSize="sm" color="ink.500">
-                  {hasDbUsers
-                    ? displayTotal >= 1000
-                      ? `Adopté par ${formatMetric(displayTotal, { uppercaseK: false })}+ créateurs`
-                      : `Adopté par ${formatNumber(displayTotal)} créateur${displayTotal > 1 ? "s" : ""}`
-                    : "Adopté par 40 000+ créateurs"}
-                </Text>
-              </Stack>
-            </HStack>
+       
       </Container>
     </Box>
   );

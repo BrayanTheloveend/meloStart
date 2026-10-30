@@ -66,7 +66,7 @@ export default function Step4QuickStart({ data, onFinish }) {
       </Stack>
 
       {/* Résumé synthétique de la personnalisation */}
-      <Box p="5" rounded="2xl" bg="paper.100" borderWidth="1px" borderColor="paper.300">
+      <Box display={'none'} p="5" rounded="2xl" bg="paper.100" borderWidth="1px" borderColor="paper.300">
         <Flex justify="space-between" align="center" mb="3">
           <Text fontFamily="ui" fontWeight="700" fontSize="xs" color="ink.500" textTransform="uppercase" letterSpacing="wider">
             Votre profil musical sur mesure
@@ -104,7 +104,22 @@ export default function Step4QuickStart({ data, onFinish }) {
       </Box>
 
       {/* Deux choix clairs d'activation immédiate */}
-      <Stack gap="4">
+
+      <Button
+        size={{md: "xl", base: 'md'}}
+        rounded="full"
+        fontFamily="ui"
+        color="white"
+        background={accent.primary}
+        _hover={{ transform: "translateY(-2px)", boxShadow: "0 6px 20px rgba(124, 58, 237, 0.3)" }}
+        transition="all 0.25s"
+        onClick={handleLaunchStudio}
+        w="full"
+      >
+        <LucideWandSparkles /> Ouvrir mon Studio personnalisé <LuArrowRight />
+      </Button>
+
+      <Stack gap="4" display={'none'}>
         <Text fontFamily="ui" fontWeight="700" fontSize="md" color="ink.900" textAlign="center">
           Choisissez comment vous souhaitez commencer :
         </Text>
@@ -181,9 +196,6 @@ export default function Step4QuickStart({ data, onFinish }) {
           >
             <Stack gap="3">
               <HStack gap="3">
-                <Box boxSize="12" rounded="2xl" bg="paper.200" display="flex" alignItems="center" justifyContent="center" color="ink.700" fontSize="2xl">
-                  🎧
-                </Box>
                 <Box>
                   <Text fontFamily="heading" fontWeight="800" fontSize="lg" color="ink.900" lineHeight="tight">
                     Explorer les démos et exemples
@@ -203,7 +215,6 @@ export default function Step4QuickStart({ data, onFinish }) {
               variant="outline"
               rounded="full"
               fontFamily="ui"
-              fontWeight="600"
               color="ink.900"
               borderColor="paper.400"
               bg="paper.0"

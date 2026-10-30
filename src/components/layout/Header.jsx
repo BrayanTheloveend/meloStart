@@ -122,9 +122,9 @@ export default function Header() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    p="1"
                     rounded="full"
-                    borderWidth="2px"
+                    px={0}
+                    borderWidth="0.9px"
                     borderColor={userMenuOpen ? "brand.violetDeep" : "paper.200"}
                     _hover={{ borderColor: "brand.violetDeep", bg: "paper.100" }}
                     onClick={() => setUserMenuOpen((v) => !v)}

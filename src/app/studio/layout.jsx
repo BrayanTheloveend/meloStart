@@ -35,7 +35,7 @@ import { accent } from "@/theme/system";
 
 const NAV_ITEMS = [
   { id: "home", href: "/studio", icon: LuHouse, label: "Accueil", desktopLabel: "Accueil", match: (p) => p === "/studio" },
-  // { id: "explorer", href: "/explorer", icon: LuCompass, label: "Explorer", desktopLabel: "Explorer", match: (p) => p.startsWith("/explorer") },
+  { id: "explorer", href: "/explorer", icon: LuCompass, label: "Explorer", desktopLabel: "Explorer", match: (p) => p.startsWith("/explorer") },
   { id: "create", href: "/studio/create", icon: LuWandSparkles, label: "Créer", desktopLabel: "Créer (2 Notes)", isCenterAction: true, match: (p) => p.startsWith("/studio/create") },
   { id: "library", href: "/studio/library", icon: LuLibrary, label: "Bibliothèque", desktopLabel: "Bibliothèque", match: (p) => p.startsWith("/studio/library") },
   { id: "profile", href: "/studio/profil", icon: LuUser, label: "Profil", desktopLabel: "Profil", match: (p) => p.startsWith("/studio/profil") },
@@ -410,17 +410,17 @@ function StudioLayoutContent({ children }) {
       <Box
         display={{ base: "block", lg: "none" }}
         position="fixed"
-        bottom="3"
-        left="50%"
-        transform="translateX(-50%)"
-        w="calc(100% - 24px)"
+        bottom="0"
+      
+        // transform="translateX(-50%)"
+        w="100%"
         maxW="420px"
         zIndex="50"
         pointerEvents="auto"
       >
         <Flex
           h="64px"
-          rounded="full"
+          rounded="none"
           bg="rgba(255, 255, 255, 0.76)"
           backdropFilter="blur(24px) saturate(190%)"
           borderWidth="1px"

@@ -5,6 +5,7 @@ import { LuClock, LuDownload, LuHeart, LuMusic, LuPause, LuPlay, LuPlus, LuSpark
 import Waveform from "@/components/common/Waveform";
 import { accent } from "@/theme/system";
 import { downloadTrackAudio } from "@/lib/downloadTrack";
+import { useSession } from "next-auth/react";
 
 const quickPrompts = [
   { genre: "Afrobeat", title: "Vibes d'été Afrobeat", prompt: "Une chanson afrobeat rythmée et solaire pour faire danser les amis en vacances." },
@@ -27,6 +28,11 @@ export default function StudioHome({
   onToggleFavorite,
   onPreloadPrompt,
 }) {
+
+  const { data: session } = useSession();
+  const userName = session?.user?.name || "Créateur pretymelo";
+  const userImage = session?.user?.image || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop";
+
   return (
     <Stack gap="8" p={{ base: "5", md: "8" }} maxW="6xl" mx="auto">
       {/* 1. Barre d'accueil et solde de Notes */}
@@ -34,14 +40,11 @@ export default function StudioHome({
         <Box>
           <HStack gap="2">
             <Text fontFamily="heading" fontWeight="800" fontSize={{ base: "xl", md: "3xl" }} color="ink.900" letterSpacing="-0.03em">
-              Studio pretymelo
+              Salut {userName}
             </Text>
-            <Badge size="sm" rounded="full" bg="brand.violetTint" color="brand.violetDeep" px="2.5" py="0.5" fontFamily="ui" fontWeight="600">
-              v2.0
-            </Badge>
           </HStack>
           <Text fontSize="sm" color="ink.500" mt="1">
-            Générez, écoutez et téléchargez vos titres créés par IA.
+           Bienvenue sur pretymelo.com, la plateforme qui transforme vos idées en musique en quelques secondes.
           </Text>
         </Box>
 
@@ -90,7 +93,7 @@ export default function StudioHome({
         >
           <Stack gap="1.5" maxW="xl">
             <HStack gap="2">
-              <Badge
+              {/* <Badge
                 rounded="full"
                 px="2.5"
                 py="0.5"
@@ -100,7 +103,7 @@ export default function StudioHome({
                 fontWeight="700"
               >
                 Studio IA
-              </Badge>
+              </Badge> */}
               <Text fontSize="xs" color="ink.400">
                 2 Notes / chanson
               </Text>
@@ -115,7 +118,7 @@ export default function StudioHome({
               Prêt à composer votre prochain titre ?
             </Text>
             <Text fontSize="sm" color="ink.500" lineHeight="tall">
-              Décrivez votre ambiance ou saisissez vos paroles. L&apos;IA compose les mélodies, les voix et le mastering en 30 secondes.
+              Décrivez votre ambiance ou saisissez vos paroles. Pretymelo compose les mélodies, les voix et le mastering en 30 secondes.
             </Text>
           </Stack>
 
@@ -123,7 +126,6 @@ export default function StudioHome({
             size={{ base: "md", md: "lg" }}
             rounded="full"
             fontFamily="ui"
-            fontWeight="600"
             color="white"
             background={accent.primary}
             _hover={{ opacity: 0.92 }}

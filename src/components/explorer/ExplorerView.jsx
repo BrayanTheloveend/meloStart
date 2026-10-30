@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,7 +17,6 @@ import {
 import {
   LuArrowDown,
   LuArrowLeft,
-  LuCompass,
   LuFileText,
   LuHeart,
   LuMusic,
@@ -35,14 +34,13 @@ import {
   LuX,
 } from "react-icons/lu";
 
-import { explorerTracks } from "@/data/explorerTracks";
 import { api } from "@/lib/apiClient";
-import { accent } from "@/theme/system";
 import Logo from "../common/Logo";
+import { accent } from "@/theme/system";
 
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-// Synthétiseur d'ambiance Web Audio natif + lecteur Audio HTML5 pour donner vie aux morceaux en direct
+// Synthétiseur d'ambiance Web Audio natif + lecteur Audio HTML5
 class AmbientAudioEngine {
   constructor() {
     this.ctx = null;
@@ -53,6 +51,10 @@ class AmbientAudioEngine {
     this.lfo = null;
     this.lfoGain = null;
     this.htmlAudio = null;
+    this.currentUrl = null;
+    this.onTimeUpdate = null;
+    this.onDurationChange = null;
+    this.onEnded = null;
   }
 
   init() {
@@ -68,21 +70,43 @@ class AmbientAudioEngine {
     }
   }
 
-  playTrack(genre = "Afrobeat", volume = 80, isMuted = false, audioUrl = null) {
-    this.stop();
-
-    // Si une URL audio réelle est fournie (ex: MP3 généré ou stocké)
+  playTrack(genre = "Afrobeat", volume = 80, isMuted = false, audioUrl = null, startTime = 0) {
     if (audioUrl && typeof window !== "undefined") {
       try {
+        this.stopSynth();
         if (!this.htmlAudio) {
           this.htmlAudio = new Audio();
         }
-        this.htmlAudio.src = audioUrl;
+
+        // Branchement des écouteurs de synchronisation en temps réel
+        this.htmlAudio.ontimeupdate = () => {
+          if (this.onTimeUpdate && !isNaN(this.htmlAudio.currentTime)) {
+            this.onTimeUpdate(this.htmlAudio.currentTime);
+          }
+        };
+
+        this.htmlAudio.onloadedmetadata = () => {
+          if (this.onDurationChange && !isNaN(this.htmlAudio.duration) && this.htmlAudio.duration > 0) {
+            this.onDurationChange(this.htmlAudio.duration);
+          }
+        };
+
+        this.htmlAudio.onended = () => {
+          if (this.onEnded) {
+            this.onEnded();
+          }
+        };
+
+        if (this.currentUrl !== audioUrl) {
+          this.currentUrl = audioUrl;
+          this.htmlAudio.src = audioUrl;
+          this.htmlAudio.currentTime = startTime;
+        }
+
         this.htmlAudio.volume = isMuted ? 0 : Math.min(1, volume / 100);
         const playPromise = this.htmlAudio.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {
-            // En cas d'erreur de lecture média, basculer sur le synthé d'ambiance
             this.playSynthTrack(genre, volume, isMuted);
           });
         }
@@ -91,6 +115,34 @@ class AmbientAudioEngine {
     }
 
     this.playSynthTrack(genre, volume, isMuted);
+  }
+
+  seek(time) {
+    if (this.htmlAudio && !isNaN(time)) {
+      try {
+        this.htmlAudio.currentTime = Math.max(0, time);
+      } catch (_) {}
+    }
+  }
+
+  pause() {
+    if (this.htmlAudio) {
+      try {
+        this.htmlAudio.pause();
+      } catch (_) {}
+    }
+    this.stopSynth();
+  }
+
+  resume() {
+    if (this.htmlAudio && this.currentUrl) {
+      try {
+        const p = this.htmlAudio.play();
+        if (p !== undefined) {
+          p.catch(() => {});
+        }
+      } catch (_) {}
+    }
   }
 
   playSynthTrack(genre = "Afrobeat", volume = 80, isMuted = false) {
@@ -108,25 +160,24 @@ class AmbientAudioEngine {
       this.filter.type = "lowpass";
       this.filter.frequency.setValueAtTime(genre.includes("Synthwave") ? 1400 : 900, now);
 
-      // Fréquences harmonieuses selon l'ambiance
-      let freq1 = 220; // La3 (Afrobeat)
-      let freq2 = 330; // Mi4
+      let freq1 = 220;
+      let freq2 = 330;
       let type1 = "triangle";
       let type2 = "sine";
 
       if (genre.includes("Synthwave")) {
-        freq1 = 146.83; // Ré3
-        freq2 = 220;    // La3
+        freq1 = 146.83;
+        freq2 = 220;
         type1 = "sawtooth";
         type2 = "triangle";
       } else if (genre.includes("Acoustique")) {
-        freq1 = 196;    // Sol3
-        freq2 = 293.66; // Ré4
+        freq1 = 196;
+        freq2 = 293.66;
         type1 = "sine";
         type2 = "triangle";
       } else if (genre.includes("Pop")) {
-        freq1 = 261.63; // Do4
-        freq2 = 392;    // Sol4
+        freq1 = 261.63;
+        freq2 = 392;
         type1 = "triangle";
         type2 = "sine";
       }
@@ -139,7 +190,6 @@ class AmbientAudioEngine {
       this.osc2.type = type2;
       this.osc2.frequency.setValueAtTime(freq2, now);
 
-      // LFO pour créer une pulsation musicale douce
       this.lfo = this.ctx.createOscillator();
       this.lfo.frequency.setValueAtTime(genre.includes("Afrobeat") ? 2 : 1.2, now);
       this.lfoGain = this.ctx.createGain();
@@ -174,14 +224,7 @@ class AmbientAudioEngine {
     } catch (_) {}
   }
 
-  stop() {
-    if (this.htmlAudio) {
-      try {
-        this.htmlAudio.pause();
-        this.htmlAudio.currentTime = 0;
-      } catch (_) {}
-    }
-
+  stopSynth() {
     try {
       if (this.osc1) {
         this.osc1.stop();
@@ -200,20 +243,36 @@ class AmbientAudioEngine {
       }
     } catch (_) {}
   }
+
+  stop() {
+    if (this.htmlAudio) {
+      try {
+        this.htmlAudio.pause();
+        this.htmlAudio.currentTime = 0;
+      } catch (_) {}
+    }
+    this.currentUrl = null;
+    this.stopSynth();
+  }
 }
 
 const audioPlayer = new AmbientAudioEngine();
 
+const GENRES = ["Tous", "Afrobeat", "Synthwave", "Pop", "Acoustique"];
+
 export default function ExplorerView() {
   const router = useRouter();
-  const [tracks, setTracks] = useState(explorerTracks);
+  const [tracks, setTracks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [showLyrics, setShowLyrics] = useState(true); // Ouvert par défaut sur grand écran, adaptatif
+  const [showLyrics, setShowLyrics] = useState(true);
+  const [showMobileLyrics, setShowMobileLyrics] = useState(false);
   const [showSearchMobile, setShowSearchMobile] = useState(false);
   const [search, setSearch] = useState("");
+  const [selectedGenre, setSelectedGenre] = useState("Tous");
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
   const [copyNotification, setCopyNotification] = useState("");
@@ -230,51 +289,52 @@ export default function ExplorerView() {
   const lastWheelTime = useRef(0);
   const lastCoverTap = useRef(0);
 
-  // Détecter la largeur d'écran initiale pour le panneau de paroles
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setShowLyrics(window.innerWidth >= 1024);
-    }
-  }, []);
-
-  // Synchronisation des pistes publiques réelles depuis la base de données
+  // Synchronisation des pistes publiques réelles depuis l'API (AUCUNE MOCK DATA)
   useEffect(() => {
     let isMounted = true;
+
     api.get("/api/tracks?public=true")
       .then((res) => {
-        if (!isMounted || !res?.data || res.data.length === 0) return;
-        const dbTracks = res.data.map((t) => ({
-          id: t.id,
-          title: t.title,
-          subtitle: t.prompt || `${t.genre || "Afrobeat"} composé par IA`,
-          genre: t.genre || "Afrobeat",
-          creator: t.user?.name || "Artiste pretymelo",
-          duration: t.duration || 120,
-          cover: t.coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&fit=crop",
-          audioUrl: t.audioUrl || null,
-          accentColor: "#7c3aed",
-          likes: 38,
-          shares: 7,
-          lyrics: t.lyrics
-            ? t.lyrics.split("\n").filter(Boolean).map((line, idx) => ({
-                id: idx + 1,
-                time: idx * 5,
-                text: line,
-              }))
-            : [
-                { id: 1, time: 0, text: "♪ Mélodie composée par IA pretymelo ♪" },
-                { id: 2, time: 6, text: t.prompt || "Harmonies vocales et rythmes captivants" },
-              ],
-        }));
-
-        setTracks((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          const newUnique = dbTracks.filter((d) => !existingIds.has(d.id));
-          return [...newUnique, ...prev];
-        });
+        if (!isMounted) return;
+        const rawList = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        if (rawList.length > 0) {
+          const dbTracks = rawList.map((t) => ({
+            id: t.id,
+            title: t.title || "Titre sans nom",
+            subtitle: t.prompt || `${t.genre || "Afrobeat"} composé par IA`,
+            genre: t.genre || "Afrobeat",
+            creator: t.user?.name || "Artiste pretymelo",
+            duration: t.duration || 120,
+            cover: t.coverUrl || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&fit=crop",
+            audioUrl: t.audioUrl || null,
+            accentColor: accent.primary,
+            glowColor: "rgba(184, 30, 215, 0.25)",
+            likes: t.likesCount || 0,
+            shares: 0,
+            listens: t.playCount || 0,
+            tags: [t.genre || "Afrobeat", "IA pretymelo"].filter(Boolean),
+            lyrics: t.lyrics
+              ? t.lyrics.split("\n").filter(Boolean).map((line, idx) => ({
+                  id: idx + 1,
+                  time: idx * 5,
+                  text: line,
+                }))
+              : [
+                  { id: 1, time: 0, text: "♪ Mélodie composée par IA pretymelo ♪" },
+                  { id: 2, time: 6, text: t.prompt || "Harmonies vocales et rythmes captivants" },
+                ],
+          }));
+          setTracks(dbTracks);
+        } else {
+          setTracks([]);
+        }
       })
       .catch((err) => {
         console.warn("[ExplorerView] Impossible de charger les pistes publiques:", err.message);
+        if (isMounted) setTracks([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
       });
 
     return () => {
@@ -282,147 +342,52 @@ export default function ExplorerView() {
     };
   }, []);
 
-  // Morceaux filtrés selon recherche
+  // Morceaux filtrés selon la recherche et le genre
   const filteredTracks = tracks.filter((t) => {
-    return (
+    const matchesSearch =
       t.title.toLowerCase().includes(search.toLowerCase()) ||
       t.genre.toLowerCase().includes(search.toLowerCase()) ||
       t.creator.toLowerCase().includes(search.toLowerCase()) ||
-      t.subtitle.toLowerCase().includes(search.toLowerCase())
-    );
+      t.subtitle.toLowerCase().includes(search.toLowerCase());
+
+    const matchesGenre =
+      selectedGenre === "Tous" ||
+      t.genre.toLowerCase().includes(selectedGenre.toLowerCase());
+
+    return matchesSearch && matchesGenre;
   });
 
-  const currentTrack = filteredTracks[currentIndex] || tracks[0];
-  const totalDuration = currentTrack?.duration || 135;
-  const currentAccent = currentTrack?.accentColor || "#f97316";
+  const currentTrack = filteredTracks[currentIndex] || null;
+  const [trackDuration, setTrackDuration] = useState(null);
+  const totalDuration = trackDuration || currentTrack?.duration || 120;
+  const currentAccent = currentTrack?.accentColor || accent.primary;
+  const glowColor = currentTrack?.glowColor || "rgba(184, 30, 215, 0.2)";
 
-  // Réinitialiser le temps quand le morceau change
-  useEffect(() => {
-    setCurrentTime(0);
-    setIsPlaying(true);
-  }, [currentIndex, currentTrack?.id]);
-
-  // Synchronisation du moteur audio (Audio HTML5 ou Synthé Web Audio)
-  useEffect(() => {
-    if (isPlaying && currentTrack) {
-      audioPlayer.playTrack(currentTrack.genre, volume, muted, currentTrack.audioUrl);
-    } else {
-      audioPlayer.stop();
-    }
-    return () => audioPlayer.stop();
-  }, [isPlaying, currentIndex, currentTrack?.id, currentTrack?.audioUrl]);
-
-  useEffect(() => {
-    audioPlayer.setVolume(volume, muted);
-  }, [volume, muted]);
-
-  // Défilement du chrono de lecture et auto-scroll à la fin du morceau
-  useEffect(() => {
-    if (!isPlaying || isDraggingSeek) {
-      clearInterval(timerRef.current);
-      return;
-    }
-
-    timerRef.current = setInterval(() => {
-      setCurrentTime((prev) => {
-        if (prev >= totalDuration) {
-          if (isLooping) return 0;
-
-          if (autoScroll) {
-            // Auto-défilement instantané vers le morceau suivant
-            goToNextTrack();
-            return 0;
-          } else {
-            setIsPlaying(false);
-            return totalDuration;
-          }
-        }
-        return prev + 0.25;
-      });
-    }, 250);
-
-    return () => clearInterval(timerRef.current);
-  }, [isPlaying, totalDuration, autoScroll, isLooping, currentIndex, filteredTracks.length, isDraggingSeek]);
-
-  // Auto-centrage des paroles synchronisées sur la strophe active (Desktop & Mobile)
-  useEffect(() => {
-    if (activeLyricRef.current && lyricsContainerRef.current) {
-      activeLyricRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    if (mobileActiveLyricRef.current && mobileLyricsContainerRef.current) {
-      mobileActiveLyricRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [currentTime]);
-
-  const goToNextTrack = () => {
+  // Handlers de navigation et interactions déclarés en amont
+  const goToNextTrack = useCallback(() => {
     if (filteredTracks.length === 0) return;
     setCurrentIndex((prev) => (prev + 1) % filteredTracks.length);
-  };
+    setCurrentTime(0);
+    setTrackDuration(null);
+    setIsPlaying(true);
+  }, [filteredTracks.length]);
 
-  const goToPrevTrack = () => {
+  const goToPrevTrack = useCallback(() => {
     if (filteredTracks.length === 0) return;
     setCurrentIndex((prev) => (prev - 1 + filteredTracks.length) % filteredTracks.length);
-  };
+    setCurrentTime(0);
+    setTrackDuration(null);
+    setIsPlaying(true);
+  }, [filteredTracks.length]);
 
-  // Gestion des gestes tactiles (Swipe UP / Swipe DOWN sur mobile)
-  const handleTouchStart = (e) => {
-    touchStartY.current = e.touches[0].clientY;
-  };
+  const selectTrack = useCallback((index) => {
+    setCurrentIndex(index);
+    setCurrentTime(0);
+    setTrackDuration(null);
+    setIsPlaying(true);
+  }, []);
 
-  const handleTouchEnd = (e) => {
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (deltaY < -40) {
-      // Glissé vers le haut -> Titre suivant (comme TikTok/Reels)
-      goToNextTrack();
-    } else if (deltaY > 40) {
-      // Glissé vers le bas -> Titre précédent
-      goToPrevTrack();
-    }
-  };
-
-  // Défilement à la molette de souris (throttled)
-  const handleWheel = (e) => {
-    const now = Date.now();
-    if (now - lastWheelTime.current < 550) return;
-    if (e.deltaY > 50) {
-      lastWheelTime.current = now;
-      goToNextTrack();
-    } else if (e.deltaY < -50) {
-      lastWheelTime.current = now;
-      goToPrevTrack();
-    }
-  };
-
-  // Raccourcis clavier (Espace, Flèche bas, Flèche haut, L, M, P)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-      if (e.code === "Space") {
-        e.preventDefault();
-        setIsPlaying((p) => !p);
-      } else if (e.code === "ArrowDown" || e.code === "KeyJ") {
-        e.preventDefault();
-        goToNextTrack();
-      } else if (e.code === "ArrowUp" || e.code === "KeyK") {
-        e.preventDefault();
-        goToPrevTrack();
-      } else if (e.code === "KeyL") {
-        e.preventDefault();
-        handleLike(currentTrack?.id);
-      } else if (e.code === "KeyM") {
-        e.preventDefault();
-        setMuted((m) => !m);
-      } else if (e.code === "KeyP") {
-        e.preventDefault();
-        setShowLyrics((v) => !v);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, filteredTracks.length, currentTrack?.id]);
-
-  // Like interactif
-  const handleLike = (trackId) => {
+  const handleLike = useCallback((trackId) => {
     setTracks((prev) =>
       prev.map((t) => {
         if (t.id === trackId) {
@@ -436,39 +401,235 @@ export default function ExplorerView() {
         return t;
       })
     );
+  }, []);
+
+  // Navigation précise (Seek) dans le morceau
+  const handleSeekTo = useCallback((time) => {
+    const validTime = Math.max(0, Math.min(totalDuration, time));
+    setCurrentTime(validTime);
+    audioPlayer.seek(validTime);
+  }, [totalDuration]);
+
+  // Références stables pour les écouteurs audio afin d'éviter les re-créations
+  const isDraggingSeekRef = useRef(false);
+  const isLoopingRef = useRef(false);
+  const autoScrollRef = useRef(true);
+  const goToNextTrackRef = useRef(goToNextTrack);
+
+  useEffect(() => {
+    isDraggingSeekRef.current = isDraggingSeek;
+  }, [isDraggingSeek]);
+
+  useEffect(() => {
+    isLoopingRef.current = isLooping;
+  }, [isLooping]);
+
+  useEffect(() => {
+    autoScrollRef.current = autoScroll;
+  }, [autoScroll]);
+
+  useEffect(() => {
+    goToNextTrackRef.current = goToNextTrack;
+  }, [goToNextTrack]);
+
+  // Synchronisation des callbacks temps réel de l'élément Audio HTML5
+  useEffect(() => {
+    audioPlayer.onTimeUpdate = (time) => {
+      if (!isDraggingSeekRef.current) {
+        setCurrentTime(time);
+      }
+    };
+
+    audioPlayer.onDurationChange = (dur) => {
+      if (dur > 0) {
+        setTrackDuration(dur);
+      }
+    };
+
+    audioPlayer.onEnded = () => {
+      if (isLoopingRef.current) {
+        audioPlayer.seek(0);
+        audioPlayer.resume();
+        setCurrentTime(0);
+      } else if (autoScrollRef.current) {
+        goToNextTrackRef.current();
+      } else {
+        setIsPlaying(false);
+      }
+    };
+  }, []);
+
+  // Synchronisation du chargement du morceau
+  useEffect(() => {
+    if (!currentTrack) {
+      audioPlayer.stop();
+      return;
+    }
+
+    if (isPlaying) {
+      audioPlayer.playTrack(currentTrack.genre, volume, muted, currentTrack.audioUrl);
+    } else {
+      audioPlayer.stop();
+    }
+
+    return () => {
+      audioPlayer.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrack?.id, currentTrack?.audioUrl]);
+
+  // Gestion Play / Pause sans réinitialiser la position du morceau
+  const togglePlay = useCallback(() => {
+    setIsPlaying((prev) => {
+      const next = !prev;
+      if (next) {
+        audioPlayer.resume();
+      } else {
+        audioPlayer.pause();
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!currentTrack) return;
+    if (isPlaying) {
+      audioPlayer.resume();
+    } else {
+      audioPlayer.pause();
+    }
+  }, [isPlaying, currentTrack]);
+
+  useEffect(() => {
+    audioPlayer.setVolume(volume, muted);
+  }, [volume, muted]);
+
+  // Défilement du chrono pour pistes de synthèse ou sans URL audio
+  useEffect(() => {
+    if (!isPlaying || isDraggingSeek || !currentTrack || currentTrack.audioUrl) {
+      clearInterval(timerRef.current);
+      return;
+    }
+
+    timerRef.current = setInterval(() => {
+      setCurrentTime((prev) => {
+        if (prev >= totalDuration) {
+          if (isLooping) return 0;
+          if (autoScroll) {
+            goToNextTrack();
+            return 0;
+          } else {
+            setIsPlaying(false);
+            return totalDuration;
+          }
+        }
+        return prev + 0.25;
+      });
+    }, 250);
+
+    return () => clearInterval(timerRef.current);
+  }, [isPlaying, isDraggingSeek, currentTrack, totalDuration, isLooping, autoScroll, goToNextTrack]);
+
+  // Auto-centrage des paroles synchronisées sur la strophe active
+  useEffect(() => {
+    if (activeLyricRef.current && lyricsContainerRef.current) {
+      activeLyricRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (mobileActiveLyricRef.current && mobileLyricsContainerRef.current) {
+      mobileActiveLyricRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [currentTime]);
+
+  // Raccourcis clavier (Espace, Flèche bas, Flèche haut, L, M, P)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === "ArrowDown" || e.code === "KeyJ") {
+        e.preventDefault();
+        goToNextTrack();
+      } else if (e.code === "ArrowUp" || e.code === "KeyK") {
+        e.preventDefault();
+        goToPrevTrack();
+      } else if (e.code === "KeyL") {
+        e.preventDefault();
+        if (currentTrack?.id) {
+          handleLike(currentTrack.id);
+        }
+      } else if (e.code === "KeyM") {
+        e.preventDefault();
+        setMuted((m) => !m);
+      } else if (e.code === "KeyP") {
+        e.preventDefault();
+        setShowLyrics((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goToNextTrack, goToPrevTrack, handleLike, currentTrack?.id, togglePlay]);
+
+  // Gestes tactiles (Swipe UP / Swipe DOWN sur mobile)
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
   };
 
-  // Double tap sur la pochette (effet Reels / TikTok)
+  const handleTouchEnd = (e) => {
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    if (deltaY < -40) {
+      goToNextTrack();
+    } else if (deltaY > 40) {
+      goToPrevTrack();
+    }
+  };
+
+  // Défilement à la molette de souris
+  const handleWheel = (e) => {
+    const now = Date.now();
+    if (now - lastWheelTime.current < 550) return;
+    if (e.deltaY > 50) {
+      lastWheelTime.current = now;
+      goToNextTrack();
+    } else if (e.deltaY < -50) {
+      lastWheelTime.current = now;
+      goToPrevTrack();
+    }
+  };
+
+  // Double tap sur la pochette
   const handleCoverClick = () => {
     const now = Date.now();
     if (now - lastCoverTap.current < 300) {
-      // Double tap détecté !
-      if (!currentTrack?.hasLiked) {
-        handleLike(currentTrack?.id);
+      if (!currentTrack?.hasLiked && currentTrack?.id) {
+        handleLike(currentTrack.id);
       }
       setHeartBurst(true);
       setTimeout(() => setHeartBurst(false), 900);
     } else {
-      // Simple tap -> Play / Pause
-      setIsPlaying((p) => !p);
+      togglePlay();
     }
     lastCoverTap.current = now;
   };
 
   // Partager le morceau
   const handleShare = () => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && currentTrack?.id) {
       navigator.clipboard.writeText(`${window.location.origin}/explorer?track=${currentTrack.id}`);
       setCopyNotification("Lien du morceau copié !");
       setTimeout(() => setCopyNotification(""), 2200);
     }
   };
 
-  // Utiliser ce son pour créer dans le studio
+  // Ouvrir dans le studio
   const handleCreateSimilar = () => {
+    if (!currentTrack) {
+      router.push("/studio");
+      return;
+    }
     const params = new URLSearchParams();
     params.set("genre", currentTrack.genre.split("/")[0].trim());
-    params.set("prompt", currentTrack.prompt);
+    params.set("prompt", currentTrack.prompt || currentTrack.subtitle || "");
     router.push(`/studio?${params.toString()}`);
   };
 
@@ -478,13 +639,44 @@ export default function ExplorerView() {
     : 0;
   const currentLyric = currentTrack?.lyrics?.[currentLyricIndex];
 
-  // Gestion du scrub interactif sur la barre de progression
-  const handleScrub = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+  // Calcul du temps pour le scrubber interactif (clic & glisser)
+  const calculateScrubTime = useCallback((clientX, targetElement) => {
+    if (!currentTrack || totalDuration <= 0) return 0;
+    const rect = targetElement.getBoundingClientRect();
+    const clickX = clientX - rect.left;
     const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-    setCurrentTime(ratio * totalDuration);
-  };
+    return ratio * totalDuration;
+  }, [currentTrack, totalDuration]);
+
+  const handleScrub = useCallback((e) => {
+    const newTime = calculateScrubTime(e.clientX, e.currentTarget);
+    handleSeekTo(newTime);
+  }, [calculateScrubTime, handleSeekTo]);
+
+  const handlePointerDown = useCallback((e) => {
+    setIsDraggingSeek(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    const newTime = calculateScrubTime(e.clientX, e.currentTarget);
+    setCurrentTime(newTime);
+  }, [calculateScrubTime]);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!isDraggingSeek) return;
+    const newTime = calculateScrubTime(e.clientX, e.currentTarget);
+    setCurrentTime(newTime);
+  }, [isDraggingSeek, calculateScrubTime]);
+
+  const handlePointerUp = useCallback((e) => {
+    if (!isDraggingSeek) return;
+    setIsDraggingSeek(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    const newTime = calculateScrubTime(e.clientX, e.currentTarget);
+    handleSeekTo(newTime);
+  }, [isDraggingSeek, calculateScrubTime, handleSeekTo]);
 
   return (
     <Box
@@ -492,7 +684,7 @@ export default function ExplorerView() {
       h="100dvh"
       w="100%"
       maxW="100vw"
-      bg="black" // Charte mélostars : noir ultra-profond avec nuance violette
+      bg="#121212"
       color="white"
       overflow="hidden"
       position="relative"
@@ -503,44 +695,43 @@ export default function ExplorerView() {
       onWheel={handleWheel}
       userSelect="none"
     >
-      {/* Halo d'ambiance dynamique réactif au style de la musique */}
+      {/* Halo d'ambiance dynamique ultra-doux (inspiration Spotify color mesh) */}
       <Box
         position="absolute"
-        top="50%"
-        left={{ base: "50%", lg: showLyrics ? "35%" : "50%" }}
-        transform="translate(-50%, -50%)"
-        boxSize={{ base: "320px", sm: "440px", md: "560px", lg: "650px" }}
-        rounded="full"
-        bg={`radial-gradient(circle, ${currentTrack?.glowColor || "rgba(139,92,246,0.25)"} 0%, rgba(8,5,18,0) 70%)`}
-        filter="blur(60px)"
+        top="-10%"
+        left="50%"
+        transform="translateX(-50%)"
+        w="100%"
+        maxW="1100px"
+        h="520px"
+        bg={`radial-gradient(ellipse 90% 60% at 50% 0%, ${glowColor} 0%, rgba(18, 18, 18, 0.75) 65%, #121212 100%)`}
         pointerEvents="none"
-        transition="all 0.8s ease"
+        transition="background 0.8s ease"
         zIndex="0"
-        animation="pulseGlow 6s ease-in-out infinite"
       />
 
-      {/* 1. BARRE SUPÉRIEURE ULTRA-RESPONSIVE (EXACTE AU DESIGN CAPTURE) */}
+      {/* 1. BARRE DE NAVIGATION MINIMALISTE ET SOFT STYLE SPOTIFY */}
       <Box
         as="header"
-        h={{ base: "13", sm: "14", md: "16" }}
-        px={{ base: "3", sm: "5", md: "8" }}
+        h={{ base: "14", md: "16" }}
+        px={{ base: "3", sm: "6", md: "8" }}
         borderBottomWidth="1px"
-        borderColor="rgba(255, 255, 255, 0.08)"
-        bg="blackAlpha.900"
-        backdropFilter="blur(16px)"
+        borderColor="rgba(255, 255, 255, 0.06)"
+        bg="rgba(18, 18, 18, 0.85)"
+        backdropFilter="blur(20px)"
         zIndex="40"
         flexShrink={0}
       >
         <Flex h="full" align="center" justify="space-between" gap={{ base: "2", sm: "4" }}>
-          {/* Gauche : Retour Studio et Titre Explorer */}
-          <HStack gap={{ base: "1.5", sm: "3" }}>
+          {/* Gauche : Retour Studio et Logo */}
+          <HStack gap={{ base: "2", sm: "3" }}>
             <IconButton
               asChild
               size="sm"
               variant="ghost"
               rounded="full"
-              color="white"
-              _hover={{ bg: "rgba(255,255,255,0.12)" }}
+              color="#b3b3b3"
+              _hover={{ color: "white", bg: "rgba(255, 255, 255, 0.1)" }}
               aria-label="Retour au Studio"
             >
               <NextLink href="/studio">
@@ -548,113 +739,141 @@ export default function ExplorerView() {
               </NextLink>
             </IconButton>
 
-            <HStack gap="2" cursor="pointer" onClick={() => router.push("/")}>
+            <HStack gap="2.5" cursor="pointer" onClick={() => router.push("/")}>
               <Logo />
-              <Text
-                fontFamily="heading"
-                fontWeight="800"
-                fontSize={{ base: "sm", sm: "md", md: "lg" }}
-                letterSpacing="-0.02em"
-                color="white"
-              >
-                Explorer
-              </Text>
             </HStack>
           </HStack>
 
-          {/* Centre : Barre de recherche Desktop (identique à la capture) */}
-          <Box flex="1" maxW="420px" mx="4" display={{ base: "none", md: "block" }}>
-            <Box position="relative">
+          {/* Centre : Recherche capsule Spotify + Filtres genres */}
+          <HStack flex="1" maxW="580px" mx={{ base: "1", md: "4" }} gap="3" justify="center">
+            {/* Barre de recherche Desktop */}
+            <Box position="relative" flex="1" maxW="280px" display={{ base: "none", md: "block" }}>
               <Input
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setCurrentIndex(0);
                 }}
-                placeholder="Rechercher une chanson..."
-                bg="rgba(255, 255, 255, 0.08)"
-                borderColor="rgba(255, 255, 255, 0.12)"
+                placeholder="Que souhaitez-vous écouter ?"
+                bg="#242424"
+                borderWidth="0"
                 color="white"
                 rounded="full"
-                pl="10"
+                pl="9"
+                pr="8"
                 h="9"
                 fontSize="xs"
-                _hover={{ borderColor: "rgba(255, 255, 255, 0.25)" }}
-                _focusVisible={{ borderColor: currentAccent, boxShadow: `0 0 0 1px ${currentAccent}` }}
-                _placeholder={{ color: "rgba(255, 255, 255, 0.4)" }}
+                _hover={{ bg: "#2a2a2a" }}
+                _focusVisible={{ bg: "#2a2a2a", boxShadow: "0 0 0 1.5px rgba(255,255,255,0.3)" }}
+                _placeholder={{ color: "#b3b3b3" }}
               />
               <Box
                 position="absolute"
-                left="3.5"
+                left="3"
                 top="50%"
                 transform="translateY(-50%)"
-                color="rgba(255,255,255,0.45)"
+                color="#b3b3b3"
                 pointerEvents="none"
               >
-                <LuSearch size={15} />
+                <LuSearch size={14} />
               </Box>
               {search && (
                 <Box
                   position="absolute"
-                  right="3"
+                  right="2.5"
                   top="50%"
                   transform="translateY(-50%)"
                   cursor="pointer"
                   onClick={() => setSearch("")}
                 >
-                  <LuX size={14} color="rgba(255,255,255,0.5)" />
+                  <LuX size={14} color="#b3b3b3" />
                 </Box>
               )}
             </Box>
-          </Box>
 
-          {/* Droite : Outils, Switch Auto-scroll et Bouton Créer */}
-          <HStack gap={{ base: "1", sm: "2.5" }}>
-            {/* Bouton recherche mobile */}
+            {/* Chips de genres style Spotify */}
+            <HStack gap="1.5" overflowX="auto" py="1" display={{ base: "none", sm: "flex" }}>
+              {GENRES.map((genre) => {
+                const isActive = selectedGenre === genre;
+                return (
+                  <Button
+                    key={genre}
+                    size="2xs"
+                    rounded="full"
+                    variant="ghost"
+                    bg={isActive ? "white" : "rgba(255, 255, 255, 0.07)"}
+                    color={isActive ? "#121212" : "#b3b3b3"}
+                    fontWeight={isActive ? "700" : "500"}
+                    fontSize="2xs"
+                    px="3"
+                    py="1"
+                    _hover={{
+                      bg: isActive ? "white" : "rgba(255, 255, 255, 0.12)",
+                      color: isActive ? "#121212" : "white",
+                    }}
+                    onClick={() => {
+                      setSelectedGenre(genre);
+                      setCurrentIndex(0);
+                    }}
+                  >
+                    {genre}
+                  </Button>
+                );
+              })}
+            </HStack>
+          </HStack>
+
+          {/* Droite : Outils et CTA Créer */}
+          <HStack gap={{ base: "1.5", sm: "2.5" }}>
+            {/* Recherche mobile */}
             <IconButton
               display={{ base: "flex", md: "none" }}
               size="sm"
               variant="ghost"
-              color="white"
+              color="#b3b3b3"
+              _hover={{ color: "white" }}
               rounded="full"
               onClick={() => setShowSearchMobile((v) => !v)}
               aria-label="Recherche"
             >
-              <LuSearch size={16} />
+              <LuSearch size={17} />
             </IconButton>
 
-            {/* Switch Auto-scroll */}
+            {/* Switch Auto-scroll épuré */}
             <Button
               size="xs"
               rounded="full"
-              variant={autoScroll ? "solid" : "outline"}
-              bg={autoScroll ? "rgba(139, 92, 246, 0.25)" : "transparent"}
-              borderColor={autoScroll ? "rgba(139, 92, 246, 0.5)" : "rgba(255,255,255,0.15)"}
-              color={autoScroll ? "#c4b5fd" : "rgba(255,255,255,0.5)"}
+              variant="ghost"
+              bg={autoScroll ? "rgba(153, 30, 215, 0.15)" : "transparent"}
+              color={autoScroll ? accent.primary : "#b3b3b3"}
+              _hover={{ bg: autoScroll ? "rgba(156, 30, 215, 0.25)" : "rgba(255,255,255,0.08)" }}
               onClick={() => setAutoScroll((v) => !v)}
               display={{ base: "none", sm: "inline-flex" }}
-              fontFamily="ui"
               fontSize="2xs"
               fontWeight="600"
-              gap="1"
+              gap="1.5"
+              px="2.5"
             >
-              <LuRepeat size={11} /> Auto {autoScroll ? "ON" : "OFF"}
+              <LuRepeat size={12} />
+              Auto {autoScroll ? "ON" : "OFF"}
             </Button>
 
-            {/* Bouton Créer dans le studio */}
+            {/* Bouton Créer style Spotify Pill */}
             <Button
-              size={{ base: "xs", sm: "sm" }}
+              size="sm"
               rounded="full"
-              fontFamily="ui"
               fontWeight="700"
-              color="white"
-              background={accent.primary}
-              _hover={{ transform: "translateY(-1px)", boxShadow: "0 6px 20px rgba(124, 58, 237, 0.45)" }}
+              fontSize="xs"
+              color="#121212"
+              bg="white"
+              _hover={{ transform: "scale(1.03)", bg: "#f2f2f2" }}
+              _active={{ transform: "scale(0.98)" }}
+              transition="all 0.15s ease"
               onClick={handleCreateSimilar}
-              px={{ base: "2.5", sm: "4" }}
+              px={{ base: "3", sm: "4" }}
+              gap="1.5"
             >
-              <LuWandSparkles size={14} />
-              <Text display={{ base: "none", sm: "inline" }}>Créer ma musique</Text>
+              <Text display={{ base: "none", sm: "inline" }}>Créer</Text>
               <Text display={{ base: "inline", sm: "none" }}>Créer</Text>
             </Button>
           </HStack>
@@ -670,9 +889,9 @@ export default function ExplorerView() {
                   setSearch(e.target.value);
                   setCurrentIndex(0);
                 }}
-                placeholder="Rechercher une chanson, un style…"
-                bg="rgba(255, 255, 255, 0.1)"
-                borderColor="rgba(255, 255, 255, 0.25)"
+                placeholder="Rechercher une musique, un style..."
+                bg="#242424"
+                borderWidth="0"
                 color="white"
                 rounded="full"
                 h="9"
@@ -685,611 +904,844 @@ export default function ExplorerView() {
                 left="3"
                 top="50%"
                 transform="translateY(-50%)"
-                color="rgba(255,255,255,0.5)"
+                color="#b3b3b3"
                 pointerEvents="none"
               >
-                <LuSearch size={15} />
+                <LuSearch size={14} />
               </Box>
             </Box>
           </Box>
         )}
       </Box>
 
-      {/* Toast de copie de lien */}
+      {/* Toast de copie de lien soft */}
       {copyNotification && (
         <Box
           position="absolute"
           top="18"
           left="50%"
           transform="translateX(-50%)"
-          bg="rgba(124, 58, 237, 0.95)"
+          bg="#282828"
           color="white"
           px="4"
           py="1.5"
           rounded="full"
           fontSize="xs"
-          fontFamily="ui"
           fontWeight="600"
-          boxShadow="0 8px 24px rgba(0,0,0,0.6)"
+          boxShadow="0 10px 30px rgba(0,0,0,0.6)"
+          borderWidth="1px"
+          borderColor="rgba(255, 255, 255, 0.1)"
           zIndex="60"
         >
-          ✨ {copyNotification}
+          {copyNotification}
         </Box>
       )}
 
-      {/* 2. ZONE CENTRALE DE REEL (TOTALEMENT RESPONSIVE SUR MOBILE, TABLETTE ET DESKTOP) */}
+      {/* 2. ZONE CENTRALE : SHIMMER LOADING OU LECTEUR RÉEL */}
       <Flex flex="1" minH="0" position="relative" zIndex="10" overflow="hidden">
-        {/* INDICATEUR VERTICAL DU FIL (DOTS À DROITE OU SUR LE CÔTÉ) */}
-        <Box
-          position="absolute"
-          right={{ base: "2", md: "4" }}
-          top="50%"
-          transform="translateY(-50%)"
-          zIndex="25"
-          display={{ base: "none", sm: "flex" }}
-          flexDirection="column"
-          gap="2"
-        >
-          {filteredTracks.map((_, idx) => (
-            <Box
-              key={idx}
-              boxSize={idx === currentIndex ? "2.5" : "1.5"}
-              rounded="full"
-              bg={idx === currentIndex ? currentAccent : "rgba(255,255,255,0.25)"}
-              boxShadow={idx === currentIndex ? `0 0 10px ${currentAccent}` : "none"}
-              cursor="pointer"
-              transition="all 0.3s"
-              onClick={() => setCurrentIndex(idx)}
-            />
-          ))}
-        </Box>
-
-        {/* SECTION GAUCHE / CENTRE : LE LECTEUR IMMERSIF */}
-        <Flex
-          flex={{ base: "1", lg: showLyrics ? "1.25" : "1" }}
-          direction="column"
-          align="center"
-          justify="center"
-          p={{ base: "2", sm: "3", md: "5" }}
-          position="relative"
-          h="full"
-          overflowY="auto"
-          transition="flex 0.4s ease"
-        >
-          <Stack
-            align="center"
-            gap={{ base: "2", sm: "2.5", md: "3.5" }}
-            maxW="430px"
-            w="full"
-            textAlign="center"
-            my="auto"
-          >
-            {/* Badge écoutes au-dessus de la pochette (comme dans la capture) */}
-            <HStack
-              gap="1.5"
-              px="3"
-              py="0.5"
-              rounded="full"
-              bg="rgba(255, 255, 255, 0.08)"
-              backdropFilter="blur(8px)"
-              fontSize="2xs"
-              color="rgba(255, 255, 255, 0.75)"
-              borderWidth="1px"
-              borderColor="rgba(255, 255, 255, 0.08)"
-            >
-              <Text fontSize="2xs">🎧</Text>
-              <Text fontWeight="600">{currentTrack?.listens?.toLocaleString()} écoutes</Text>
-            </HStack>
-
-            {/* Pochette d'Album (Dimensions dynamiques avec min/clamp pour s'adapter à toutes les hauteurs d'écran) */}
-            <Box
-              position="relative"
-              boxSize={{
-                base: "min(31vh, 215px)",
-                sm: "min(35vh, 255px)",
-                md: "min(39vh, 290px)",
-                lg: "min(42vh, 320px)",
-              }}
-              rounded="2xl"
-              overflow="hidden"
-              boxShadow={`0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 45px ${currentTrack.glowColor || "rgba(124, 58, 237, 0.25)"}`}
-              borderWidth="1px"
-              borderColor="rgba(255, 255, 255, 0.14)"
-              bg="#120c24"
-              flexShrink={0}
-              cursor="pointer"
-              onClick={handleCoverClick}
-              transition="transform 0.25s ease"
-              _hover={{ transform: "scale(1.015)" }}
+        {/* CAS 1 : SHIMMER LOADING SPOTIFY SANS AUCUNE MOCK DATA */}
+        {isLoading ? (
+          <Flex w="full" h="full" direction={{ base: "column", lg: "row" }} align="center" justify="center">
+            {/* Colonne gauche : Shimmer Player */}
+            <Flex
+              flex={{ base: "1", lg: "1.2" }}
+              direction="column"
+              align="center"
+              justify="center"
+              p={{ base: "3", sm: "5", md: "6" }}
+              h="full"
+              w="full"
             >
               <Box
-                as="img"
-                src={currentTrack.cover}
-                alt={currentTrack.title}
                 w="full"
-                h="full"
-                objectFit="cover"
-              />
-
-              {/* Animation Égaliseur en bas à droite de la pochette */}
-              {isPlaying && (
-                <Box
-                  position="absolute"
-                  bottom="2.5"
-                  right="2.5"
-                  px="2"
-                  py="1.5"
-                  rounded="lg"
-                  bg="rgba(0,0,0,0.65)"
-                  backdropFilter="blur(6px)"
-                  borderWidth="1px"
-                  borderColor="rgba(255,255,255,0.12)"
-                >
-                  <HStack gap="1" align="flex-end" h="14px">
-                    {[12, 18, 9, 22, 15].map((maxH, i) => (
-                      <Box
-                        key={i}
-                        w="2.5px"
-                        h={`${maxH}px`}
-                        rounded="full"
-                        bg={currentAccent}
-                        style={{
-                          animation: `wave ${0.6 + i * 0.15}s ease-in-out infinite alternate`,
-                          transformOrigin: "bottom",
-                        }}
-                      />
-                    ))}
-                  </HStack>
-                </Box>
-              )}
-
-              {/* Effet d'explosion de cœur lors d'un double-tap */}
-              {heartBurst && (
-                <Box
-                  position="absolute"
-                  inset="0"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  pointerEvents="none"
-                  zIndex="20"
-                >
-                  <Box
-                    fontSize={{ base: "6xl", md: "7xl" }}
-                    animation="heartBurst 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards"
-                  >
-                    ❤️
-                  </Box>
-                </Box>
-              )}
-            </Box>
-
-            {/* Tags sous la pochette (identique à la capture: Instrumental, Couplet-Refrain...) */}
-            <HStack gap="1.5" wrap="wrap" justify="center">
-              {currentTrack.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  px="2.5"
-                  py="0.5"
-                  rounded="full"
-                  bg="rgba(255, 255, 255, 0.08)"
-                  color="rgba(255, 255, 255, 0.8)"
-                  borderWidth="1px"
-                  borderColor="rgba(255, 255, 255, 0.12)"
-                  fontSize="2xs"
-                  fontFamily="ui"
-                  fontWeight="500"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </HStack>
-
-            {/* Titre et Sous-titre */}
-            <Stack gap="0.5" w="full" px="2">
-              <Text
-                fontFamily="heading"
-                fontWeight="800"
-                fontSize={{ base: "md", sm: "lg", md: "xl" }}
-                color="white"
-                letterSpacing="-0.02em"
-                lineHeight="short"
-                truncate
-              >
-                {currentTrack.title}
-              </Text>
-              <Text
-                fontSize={{ base: "2xs", sm: "xs" }}
-                color="rgba(255, 255, 255, 0.6)"
-                fontFamily="ui"
-                truncate
-              >
-                {currentTrack.subtitle}
-              </Text>
-            </Stack>
-
-            {/* Ticker de paroles en direct sur mobile lorsque le tiroir de paroles est fermé */}
-            {!showLyrics && currentLyric && (
-              <Box
-                px="3.5"
-                py="1.5"
-                rounded="full"
-                bg="rgba(255, 255, 255, 0.08)"
-                backdropFilter="blur(10px)"
+                maxW="480px"
+                bg="rgba(24, 24, 24, 0.6)"
                 borderWidth="1px"
-                borderColor="rgba(255, 255, 255, 0.1)"
-                cursor="pointer"
-                onClick={() => setShowLyrics(true)}
-                maxW="92%"
-                transition="all 0.2s"
-                _hover={{ bg: "rgba(255, 255, 255, 0.15)" }}
+                borderColor="rgba(255, 255, 255, 0.06)"
+                rounded="2xl"
+                p={{ base: "4", sm: "6" }}
+                backdropFilter="blur(24px)"
+                boxShadow="0 20px 50px rgba(0, 0, 0, 0.6)"
               >
-                <HStack gap="2" justify="center">
-                  <LuMusic size={13} color={currentAccent} />
-                  <Text
-                    fontSize="2xs"
-                    fontWeight="700"
-                    color={currentAccent}
-                    fontFamily="heading"
-                    truncate
-                  >
-                    « {currentLyric.text} »
-                  </Text>
+                <Stack align="center" gap={{ base: "3", sm: "4" }} textAlign="center">
+                  {/* Pochette Shimmer */}
+                  <Box
+                    boxSize={{
+                      base: "min(28vh, 190px)",
+                      sm: "min(32vh, 230px)",
+                      md: "min(36vh, 260px)",
+                      lg: "min(38vh, 280px)",
+                    }}
+                    rounded="xl"
+                    className="shimmer-box"
+                  />
+
+                  {/* Titre & Artiste Shimmer */}
+                  <Stack align="center" gap="2" w="full" py="1">
+                    <Box w="60%" h="20px" rounded="md" className="shimmer-box" />
+                    <Box w="35%" h="14px" rounded="md" className="shimmer-box" />
+                  </Stack>
+
+                  {/* Barre de progression Shimmer */}
+                  <Box w="full" px="2" pt="2">
+                    <Box w="full" h="4px" rounded="full" className="shimmer-box" />
+                    <Flex justify="space-between" mt="2">
+                      <Box w="28px" h="10px" rounded="sm" className="shimmer-box" />
+                      <Box w="28px" h="10px" rounded="sm" className="shimmer-box" />
+                    </Flex>
+                  </Box>
+
+                  {/* Boutons de contrôle Shimmer */}
+                  <HStack gap="5" justify="center" align="center" py="2">
+                    <Box boxSize="28px" rounded="full" className="shimmer-box" />
+                    <Box boxSize="34px" rounded="full" className="shimmer-box" />
+                    <Box boxSize="52px" rounded="full" className="shimmer-box" />
+                    <Box boxSize="34px" rounded="full" className="shimmer-box" />
+                    <Box boxSize="28px" rounded="full" className="shimmer-box" />
+                  </HStack>
+
+                  {/* Barre secondaire Shimmer */}
+                  <Flex w="full" justify="space-between" align="center" pt="2">
+                    <Box w="70px" h="22px" rounded="full" className="shimmer-box" />
+                    <Box w="120px" h="22px" rounded="full" className="shimmer-box" />
+                  </Flex>
+                </Stack>
+              </Box>
+
+              {/* Shimmer mini-shelf en bas */}
+              <Box w="full" maxW="480px" mt="3" display={{ base: "none", sm: "block" }}>
+                <HStack gap="2">
+                  {[1, 2, 3].map((k) => (
+                    <HStack
+                      key={k}
+                      gap="2"
+                      p="1.5"
+                      pr="3"
+                      rounded="lg"
+                      bg="rgba(255, 255, 255, 0.03)"
+                      flex="1"
+                    >
+                      <Box boxSize="28px" rounded="md" className="shimmer-box" flexShrink={0} />
+                      <Stack gap="1" flex="1">
+                        <Box w="80%" h="10px" rounded="sm" className="shimmer-box" />
+                        <Box w="50%" h="8px" rounded="sm" className="shimmer-box" />
+                      </Stack>
+                    </HStack>
+                  ))}
                 </HStack>
               </Box>
-            )}
-
-            {/* Barre de défilement audio avec scrubber précis */}
-            <Box w="full" px="2">
-              <Box
-                w="full"
-                h="2"
-                bg="rgba(255, 255, 255, 0.16)"
-                rounded="full"
-                cursor="pointer"
-                position="relative"
-                onClick={handleScrub}
-              >
-                <Box
-                  h="full"
-                  w={`${(currentTime / totalDuration) * 100}%`}
-                  bg={currentAccent}
-                  rounded="full"
-                  position="relative"
-                >
-                  <Box
-                    position="absolute"
-                    right="-5px"
-                    top="-3px"
-                    boxSize="3.5"
-                    rounded="full"
-                    bg="white"
-                    boxShadow={`0 0 10px ${currentAccent}`}
-                  />
-                </Box>
-              </Box>
-
-              <Flex justify="space-between" mt="1.5" fontSize="2xs" fontFamily="ui" color="rgba(255, 255, 255, 0.45)">
-                <Text>{fmt(currentTime)}</Text>
-                <Text>{fmt(totalDuration)}</Text>
-              </Flex>
-            </Box>
-
-            {/* Contrôles Multimédia Principaux (Previous, Big Play/Pause, Next) */}
-            <HStack gap={{ base: "4", sm: "5" }} justify="center" align="center">
-              <IconButton
-                aria-label="Morceau précédent"
-                size="md"
-                variant="ghost"
-                rounded="full"
-                color="white"
-                _hover={{ bg: "rgba(255,255,255,0.12)" }}
-                onClick={goToPrevTrack}
-              >
-                <LuSkipBack size={20} />
-              </IconButton>
-
-              {/* Bouton Play/Pause Principal (Orange / Couleur d'accentuation vive) */}
-              <IconButton
-                aria-label={isPlaying ? "Pause" : "Play"}
-                boxSize={{ base: "13", sm: "15" }}
-                rounded="full"
-                bg={currentAccent}
-                color="white"
-                onClick={() => setIsPlaying((p) => !p)}
-                boxShadow={`0 0 30px ${currentTrack.glowColor || "rgba(249, 115, 22, 0.5)"}`}
-                _hover={{ transform: "scale(1.08)" }}
-                transition="all 0.2s cubic-bezier(0.4, 0, 0.2, 1)"
-              >
-                {isPlaying ? <LuPause size={24} /> : <LuPlay size={24} style={{ marginLeft: "3px" }} />}
-              </IconButton>
-
-              <IconButton
-                aria-label="Morceau suivant"
-                size="md"
-                variant="ghost"
-                rounded="full"
-                color="white"
-                _hover={{ bg: "rgba(255,255,255,0.12)" }}
-                onClick={goToNextTrack}
-              >
-                <LuSkipForward size={20} />
-              </IconButton>
-            </HStack>
-
-            {/* Barre Secondaire : Répéter, Like, Partage, Paroles, Volume */}
-            <HStack
-              gap={{ base: "1.5", sm: "2.5" }}
-              justify="center"
-              align="center"
-              pt="0.5"
-              color="rgba(255,255,255,0.7)"
-              wrap="wrap"
-            >
-              {/* Répéter */}
-              <IconButton
-                aria-label="Répéter"
-                size="sm"
-                variant="ghost"
-                rounded="full"
-                color={isLooping ? currentAccent : "rgba(255,255,255,0.6)"}
-                _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                onClick={() => setIsLooping((v) => !v)}
-              >
-                <LuRepeat size={16} />
-              </IconButton>
-
-              {/* Like avec compteur (comme 🤍 68 dans la capture) */}
-              <Button
-                size="xs"
-                variant="ghost"
-                rounded="full"
-                color={currentTrack.hasLiked ? "red.400" : "rgba(255,255,255,0.85)"}
-                bg={currentTrack.hasLiked ? "rgba(239, 68, 68, 0.15)" : "transparent"}
-                _hover={{ bg: "rgba(255,255,255,0.12)" }}
-                onClick={() => handleLike(currentTrack.id)}
-                fontFamily="ui"
-                gap="1.5"
-                px="3"
-              >
-                <LuHeart size={16} fill={currentTrack.hasLiked ? "currentColor" : "none"} />
-                <Text fontSize="xs" fontWeight="600">
-                  {currentTrack.likes}
-                </Text>
-              </Button>
-
-              {/* Partager */}
-              <IconButton
-                aria-label="Partager"
-                size="sm"
-                variant="ghost"
-                rounded="full"
-                color="rgba(255,255,255,0.75)"
-                _hover={{ bg: "rgba(255,255,255,0.1)" }}
-                onClick={handleShare}
-              >
-                <LuShare2 size={16} />
-              </IconButton>
-
-              {/* Bouton Paroles dédié orange/accent (identique à la capture) */}
-              <Button
-                size="xs"
-                rounded="full"
-                variant="solid"
-                bg={showLyrics ? currentAccent : "rgba(255, 255, 255, 0.12)"}
-                color="white"
-                _hover={{ bg: currentAccent, transform: "scale(1.04)" }}
-                onClick={() => setShowLyrics((v) => !v)}
-                fontFamily="ui"
-                fontSize="xs"
-                fontWeight="700"
-                gap="1.5"
-                px="3.5"
-                boxShadow={showLyrics ? `0 0 15px ${currentAccent}66` : "none"}
-                transition="all 0.2s"
-              >
-                <LuFileText size={13} /> Paroles
-              </Button>
-
-              {/* Volume avec slider tactile/souris (Desktop et grand écran) */}
-              <HStack gap="1.5" display={{ base: "none", md: "flex" }} pl="1">
-                <IconButton
-                  aria-label="Mute"
-                  size="xs"
-                  variant="ghost"
-                  color="rgba(255,255,255,0.6)"
-                  onClick={() => setMuted((m) => !m)}
-                >
-                  {muted ? <LuVolumeX size={15} /> : <LuVolume2 size={15} />}
-                </IconButton>
-                <Box w="56px">
-                  <Box
-                    h="1.5"
-                    w="full"
-                    bg="rgba(255,255,255,0.2)"
-                    rounded="full"
-                    cursor="pointer"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const newVol = Math.round((x / rect.width) * 100);
-                      setVolume(Math.max(0, Math.min(100, newVol)));
-                      setMuted(false);
-                    }}
-                  >
-                    <Box h="full" w={`${muted ? 0 : volume}%`} bg="white" rounded="full" />
-                  </Box>
-                </Box>
-              </HStack>
-            </HStack>
-
-            {/* Bouton Créer dans ce style */}
-            <Button
-              size="2xs"
-              rounded="full"
-              variant="outline"
-              borderColor="rgba(255, 255, 255, 0.2)"
-              color="rgba(255, 255, 255, 0.85)"
-              _hover={{ borderColor: currentAccent, color: "white", bg: "rgba(255,255,255,0.08)" }}
-              onClick={handleCreateSimilar}
-              py="1"
-              px="3"
-            >
-              <LuSparkles size={11} color={currentAccent} /> Créer dans ce style
-            </Button>
-          </Stack>
-
-          {/* INDICATEUR FLÈCHE FLOTTANTE VERS LE BAS (SWIPE UP / TITRE SUIVANT) */}
-          <Box
-            position="absolute"
-            bottom={{ base: "2", sm: "3" }}
-            left="50%"
-            transform="translateX(-50%)"
-            cursor="pointer"
-            onClick={goToNextTrack}
-            animation="floatY 2s ease-in-out infinite"
-            p="1.5"
-            rounded="full"
-            bg="rgba(255, 255, 255, 0.08)"
-            _hover={{ bg: "rgba(255, 255, 255, 0.2)", transform: "translateX(-50%) scale(1.1)" }}
-            transition="all 0.2s"
-          >
-            <LuArrowDown size={16} color="rgba(255, 255, 255, 0.6)" />
-          </Box>
-        </Flex>
-
-        {/* SECTION DROITE : PAROLES SYNCHRONISÉES (DESKTOP >= 1024px) */}
-        {showLyrics && (
-          <Box
-            display={{ base: "none", lg: "flex" }}
-            flex="0.95"
-            h="full"
-            borderLeftWidth="1px"
-            borderColor="rgba(255, 255, 255, 0.08)"
-           bg="blackAlpha.900"
-            backdropFilter="blur(26px)"
-            p="8"
-            flexDirection="column"
-            position="relative"
-            zIndex="20"
-            transition="all 0.4s ease"
-          >
-            {/* En-tête des paroles (avec icône et bouton fermer ✕ de la capture) */}
-            <Flex
-              justify="space-between"
-              align="center"
-              pb="4"
-              borderBottomWidth="1px"
-              borderColor="rgba(255, 255, 255, 0.08)"
-            >
-              <HStack gap="2">
-                <Text fontFamily="heading" fontWeight="700" fontSize="md" color="white">
-                  Paroles
-                </Text>
-              </HStack>
-              <IconButton
-                size="xs"
-                variant="ghost"
-                color="rgba(255, 255, 255, 0.5)"
-                _hover={{ color: "white", bg: "rgba(255, 255, 255, 0.1)" }}
-                onClick={() => setShowLyrics(false)}
-                aria-label="Fermer paroles"
-              >
-                <LuX size={16} />
-              </IconButton>
             </Flex>
 
-            {/* Défilement karaoké synchronisé */}
+            {/* Colonne droite : Shimmer Paroles (Desktop) */}
             <Box
-              ref={lyricsContainerRef}
-              flex="1"
-              overflowY="auto"
-              py="10"
-              px="4"
-              className="custom-lyrics-scroll"
+              display={{ base: "none", lg: "flex" }}
+              flex="0.95"
+              h="full"
+              borderLeftWidth="1px"
+              borderColor="rgba(255, 255, 255, 0.06)"
+              bg="rgba(18, 18, 18, 0.75)"
+              backdropFilter="blur(30px)"
+              p="8"
+              flexDirection="column"
             >
-              <Stack gap="7">
-                {currentTrack.lyrics?.map((line, idx) => {
-                  const isActive = idx === currentLyricIndex;
-                  const isPast = idx < currentLyricIndex;
-
-                  return (
-                    <Box
-                      key={idx}
-                      ref={isActive ? activeLyricRef : null}
-                      cursor="pointer"
-                      onClick={() => setCurrentTime(line.time)}
-                      transition="all 0.35s cubic-bezier(0.4, 0, 0.2, 1)"
-                      transform={isActive ? "scale(1.06) translateX(6px)" : "scale(1)"}
-                      opacity={isActive ? 1 : isPast ? 0.35 : 0.65}
-                    >
-                      <Text
-                        fontFamily="heading"
-                        fontWeight={isActive ? "800" : "600"}
-                        fontSize={isActive ? "2xl" : "lg"}
-                        lineHeight="short"
-                        color={isActive ? currentAccent : "rgba(255, 255, 255, 0.85)"}
-                        textShadow={isActive ? `0 0 25px ${currentTrack.glowColor || "rgba(249, 115, 22, 0.6)"}` : "none"}
-                        _hover={{ color: "white", opacity: 1 }}
-                      >
-                        {line.text}
-                      </Text>
-                    </Box>
-                  );
-                })}
+              <Flex justify="space-between" align="center" pb="4" borderBottomWidth="1px" borderColor="rgba(255, 255, 255, 0.06)">
+                <Box w="80px" h="16px" rounded="md" className="shimmer-box" />
+              </Flex>
+              <Stack gap="6" py="10" px="4" flex="1">
+                {[75, 45, 85, 60, 40, 70, 50].map((w, idx) => (
+                  <Box key={idx} w={`${w}%`} h="24px" rounded="md" className="shimmer-box" opacity={idx === 2 ? 1 : 0.45} />
+                ))}
               </Stack>
             </Box>
-
-            {/* Bas de page Karaoké */}
-            <Flex
-              justify="space-between"
-              align="center"
-              pt="3"
-              borderTopWidth="1px"
-              borderColor="rgba(255, 255, 255, 0.08)"
-              fontSize="2xs"
-              color="rgba(255, 255, 255, 0.4)"
-              fontFamily="ui"
+          </Flex>
+        ) : !currentTrack ? (
+          /* CAS 2 : AUCUN MORCEAU DISPONIBLE */
+          <Flex w="full" h="full" align="center" justify="center" p="6" direction="column" textAlign="center">
+            <Box
+              boxSize="64px"
+              rounded="full"
+              bg="rgba(255, 255, 255, 0.06)"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              mb="4"
             >
-              <Text>Karaoké IA pretymelo</Text>
-              <Text>Cliquez sur une phrase pour avancer</Text>
+              <LuMusic size={28} color={accent.primary} />
+            </Box>
+            <Text fontFamily="heading" fontWeight="700" fontSize="xl" mb="1">
+              Aucun morceau public pour le moment
+            </Text>
+            <Text fontSize="sm" color="#b3b3b3" maxW="400px" mb="6">
+              Soyez le premier à composer et partager une musique générée par l&apos;IA avec la communauté pretymelo.
+            </Text>
+            <Button
+              rounded="full"
+              bg={accent.primary}
+              color="white"
+              fontWeight="700"
+              fontSize="sm"
+              px="6"
+              py="2.5"
+              gap="2"
+              onClick={() => router.push("/studio")}
+              _hover={{ transform: "scale(1.04)" }}
+            >
+              <LuWandSparkles size={16} />
+              Créer ma musique
+            </Button>
+          </Flex>
+        ) : (
+          /* CAS 3 : LECTEUR RÉEL SPOTIFY AVEC DONNÉES FETCHÉES */
+          <>
+            {/* SECTION GAUCHE / CENTRE : LE LECTEUR IMMERSIF SOFT */}
+            <Flex
+              flex={{ base: "1", lg: showLyrics ? "1.2" : "1" }}
+              direction="column"
+              align="center"
+              justify="center"
+              p={{ base: "2", sm: "4", md: "6" }}
+              position="relative"
+              h="full"
+              overflowY="auto"
+              transition="flex 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
+            >
+              <Box
+                w="full"
+                maxW="480px"
+                bg="rgba(24, 24, 24, 0.6)"
+                borderWidth="1px"
+                borderColor="rgba(255, 255, 255, 0.06)"
+                rounded="2xl"
+                p={{ base: "3", sm: "5", md: "6" }}
+                backdropFilter="blur(24px)"
+                boxShadow="0 20px 50px rgba(0, 0, 0, 0.6)"
+                my="auto"
+              >
+                <Stack align="center" gap={{ base: "3", sm: "4" }} textAlign="center">
+                  {/* Pochette Album Spotify */}
+                  <Box
+                    position="relative"
+                    boxSize={{
+                      base: "min(28vh, 190px)",
+                      sm: "min(32vh, 230px)",
+                      md: "min(36vh, 260px)",
+                      lg: "min(38vh, 280px)",
+                    }}
+                    rounded="xl"
+                    overflow="hidden"
+                    boxShadow="0 16px 36px rgba(0, 0, 0, 0.7)"
+                    bg="#181818"
+                    flexShrink={0}
+                    cursor="pointer"
+                    onClick={handleCoverClick}
+                    transition="transform 0.25s ease"
+                    _hover={{ transform: "scale(1.02)" }}
+                  >
+                    <Box
+                      as="img"
+                      src={currentTrack.cover}
+                      alt={currentTrack.title}
+                      w="full"
+                      h="full"
+                      objectFit="cover"
+                    />
+
+                    {/* Égaliseur discret Spotify en bas à droite */}
+                    {isPlaying && (
+                      <Box
+                        position="absolute"
+                        bottom="2"
+                        right="2"
+                        px="2"
+                        py="1"
+                        rounded="md"
+                        bg="rgba(0, 0, 0, 0.7)"
+                        backdropFilter="blur(8px)"
+                      >
+                        <HStack gap="1" align="flex-end" h="12px">
+                          {[10, 16, 8, 18, 12].map((maxH, i) => (
+                            <Box
+                              key={i}
+                              w="2px"
+                              h={`${maxH}px`}
+                              rounded="full"
+                              bg={accent.primary}
+                              style={{
+                                animation: `wave ${0.5 + i * 0.15}s ease-in-out infinite alternate`,
+                                transformOrigin: "bottom",
+                              }}
+                            />
+                          ))}
+                        </HStack>
+                      </Box>
+                    )}
+
+                    {/* Animation Coeur Double Tap */}
+                    {heartBurst && (
+                      <Box
+                        position="absolute"
+                        inset="0"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        pointerEvents="none"
+                        zIndex="20"
+                      >
+                        <Box
+                          fontSize="6xl"
+                          animation="heartBurst 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards"
+                        >
+                          <LuHeart color={"red"} fill="red" />
+                        </Box>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Métadonnées Titre et Artiste (Typographie épurée Spotify) */}
+                  <Box w="full" px="2">
+                    <Text
+                      fontFamily="heading"
+                      fontWeight="700"
+                      fontSize={{ base: "lg", sm: "xl", md: "2xl" }}
+                      color="white"
+                      letterSpacing="-0.02em"
+                      lineHeight="tight"
+                      truncate
+                    >
+                      {currentTrack.title}
+                    </Text>
+
+                    <HStack justify="center" gap="2" mt="1">
+                      <Text
+                        fontSize="xs"
+                        color="#b3b3b3"
+                        fontWeight="500"
+                        _hover={{ color: "white" }}
+                        cursor="pointer"
+                        truncate
+                      >
+                        {currentTrack.creator}
+                      </Text>
+                      <Text color="rgba(255, 255, 255, 0.2)">•</Text>
+                      <Badge
+                        size="xs"
+                        px="2"
+                        py="0.5"
+                        rounded="full"
+                        bg="rgba(255, 255, 255, 0.08)"
+                        color="#e0e0e0"
+                        fontSize="2xs"
+                        fontWeight="500"
+                      >
+                        {currentTrack.genre}
+                      </Badge>
+                    </HStack>
+                  </Box>
+
+                  {/* Ticker de paroles doux pour mobile lorsque le tiroir est fermé avec gradient transparent noir */}
+                  {currentLyric && (
+                    <Box
+                      position="relative"
+                      h="34px"
+                      w="full"
+                      maxW="92%"
+                      overflow="hidden"
+                      rounded="none"
+                      bg="rgba(24, 24, 24, 0.6)"
+                      
+                      cursor="pointer"
+                      onClick={() => setShowMobileLyrics(true)}
+                      display={{ base: "flex", lg: "none" }}
+                      alignItems="center"
+                      justifyContent="center"
+                      transition="all 0.2s"
+                      _hover={{ borderColor: "rgba(255, 255, 255, 0.16)", bg: "rgba(24, 24, 24, 0.6)" }}
+                    >
+                      {/* Dégradé noir transparent en haut (effet de disparition) */}
+                      <Box
+                        position="absolute"
+                        top="0"
+                        left="0"
+                        right="0"
+                        h="10px"
+                        bg="linear-gradient(180deg, #181818 0%, rgba(24, 24, 24, 0) 100%)"
+                        pointerEvents="none"
+                        zIndex="3"
+                      />
+
+                      {/* Dégradé noir transparent en bas (effet d'apparition) */}
+                      <Box
+                        position="absolute"
+                        bottom="0"
+                        left="0"
+                        right="0"
+                        h="10px"
+                        bg="linear-gradient(0deg, #181818 0%, rgba(24, 24, 24, 0) 100%)"
+                        pointerEvents="none"
+                        zIndex="3"
+                      />
+
+                      
+
+                      {/* Contenu textuel avec animation au changement de paroles */}
+                      <Box
+                        key={currentLyric.id ?? currentLyric.time ?? currentLyric.text}
+                        animation="lyricSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+                        w="full"
+                        px="4"
+                        textAlign="center"
+                        zIndex="1"
+                      >
+                        <Text
+                          fontSize="sm"
+                          fontWeight="500"
+                          color="white"
+                          truncate
+                        >
+                          {currentLyric.text}
+                        </Text>
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Barre de défilement Spotify (Ligne fine avec hover dynamique & navigation fluide) */}
+                  <Box w="full" px="2">
+                    <Box
+                      w="full"
+                      py="2"
+                      cursor="pointer"
+                      position="relative"
+                      onClick={handleScrub}
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      role="group"
+                    >
+                      {/* Piste de fond */}
+                      <Box
+                        w="full"
+                        h="4px"
+                        bg="rgba(255, 255, 255, 0.2)"
+                        rounded="full"
+                        position="relative"
+                        _groupHover={{ h: "6px" }}
+                        transition="height 0.15s ease"
+                      >
+                        {/* Piste remplie */}
+                        <Box
+                          h="full"
+                          w={`${totalDuration > 0 ? Math.min(100, Math.max(0, (currentTime / totalDuration) * 100)) : 0}%`}
+                          bg={currentAccent}
+                          rounded="full"
+                          position="relative"
+                        >
+                          {/* Poignée de scrub visible au survol ou en cours de drag */}
+                          <Box
+                            position="absolute"
+                            right="-5px"
+                            top="50%"
+                            transform="translateY(-50%)"
+                            boxSize={isDraggingSeek ? "13px" : "11px"}
+                            rounded="full"
+                            bg="white"
+                            boxShadow="0 2px 6px rgba(0,0,0,0.6)"
+                            opacity={isDraggingSeek ? "1" : "0"}
+                            _groupHover={{ opacity: "1" }}
+                            transition="all 0.15s ease"
+                          />
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    <Flex justify="space-between" mt="0.5" fontSize="2xs" color="#a7a7a7" fontWeight="500">
+                      <Text>{fmt(currentTime)}</Text>
+                      <Text>{fmt(totalDuration)}</Text>
+                    </Flex>
+                  </Box>
+
+                  {/* Contrôles Multimédia Principaux Spotify */}
+                  <HStack gap={{ base: "5", sm: "6" }} justify="center" align="center" py="1">
+                    {/* Boucle / Repeat */}
+                    <IconButton
+                      aria-label="Répéter"
+                      size="sm"
+                      variant="ghost"
+                      rounded="full"
+                      color={isLooping ? accent.primary : "#b3b3b3"}
+                      _hover={{ color: "white" }}
+                      onClick={() => setIsLooping((v) => !v)}
+                      position="relative"
+                    >
+                      <LuRepeat size={18} />
+                      {isLooping && (
+                        <Box
+                          position="absolute"
+                          bottom="1"
+                          boxSize="3px"
+                          rounded="full"
+                          bg={accent.primary}
+                        />
+                      )}
+                    </IconButton>
+
+                    {/* Morceau précédent */}
+                    <IconButton
+                      aria-label="Morceau précédent"
+                      size="md"
+                      variant="ghost"
+                      rounded="full"
+                      color="#b3b3b3"
+                      _hover={{ color: "white" }}
+                      onClick={goToPrevTrack}
+                    >
+                      <LuSkipBack size={22} />
+                    </IconButton>
+
+                    {/* Bouton Play / Pause Signature Spotify (Cercle blanc, icône noire) */}
+                    <IconButton
+                      aria-label={isPlaying ? "Pause" : "Play"}
+                      boxSize={{ base: "12", sm: "14" }}
+                      rounded="full"
+                      bg="white"
+                      color="#121212"
+                      onClick={togglePlay}
+                      boxShadow="0 8px 24px rgba(0, 0, 0, 0.4)"
+                      _hover={{ transform: "scale(1.06)", bg: "#f8f8f8" }}
+                      _active={{ transform: "scale(0.96)" }}
+                      transition="all 0.15s cubic-bezier(0.4, 0, 0.2, 1)"
+                    >
+                      {isPlaying ? (
+                        <LuPause size={22} />
+                      ) : (
+                        <LuPlay size={22} style={{ marginLeft: "3px" }} />
+                      )}
+                    </IconButton>
+
+                    {/* Morceau suivant */}
+                    <IconButton
+                      aria-label="Morceau suivant"
+                      size="md"
+                      variant="ghost"
+                      rounded="full"
+                      color="#b3b3b3"
+                      _hover={{ color: "white" }}
+                      onClick={goToNextTrack}
+                    >
+                      <LuSkipForward size={22} />
+                    </IconButton>
+
+                    {/* Like / Favori */}
+                    <IconButton
+                      aria-label="Aimer"
+                      size="sm"
+                      variant="ghost"
+                      rounded="full"
+                      color={currentTrack.hasLiked ? "#ef4444" : "#b3b3b3"}
+                      _hover={{ color: currentTrack.hasLiked ? "#ef4444" : "white" }}
+                      onClick={() => handleLike(currentTrack.id)}
+                    >
+                      <LuHeart
+                        size={19}
+                        fill={currentTrack.hasLiked ? "currentColor" : "none"}
+                      />
+                    </IconButton>
+                  </HStack>
+
+                  {/* Barre Secondaire : Paroles, Partage, Volume, Style */}
+                  <Flex
+                    w="full"
+                    justify="space-between"
+                    align="center"
+                    pt="2"
+                    borderTopWidth="1px"
+                    borderColor="rgba(255, 255, 255, 0.06)"
+                  >
+                    {/* Bouton Paroles */}
+                    <Button
+                      size="xs"
+                      rounded="full"
+                      variant="ghost"
+                      bg={showLyrics ? "rgba(255, 255, 255, 0.12)" : "transparent"}
+                      color={showLyrics ? "white" : "#b3b3b3"}
+                      _hover={{ bg: "rgba(255, 255, 255, 0.15)", color: "white" }}
+                      onClick={() => {
+                        setShowLyrics((v) => !v);
+                        setShowMobileLyrics(true);
+                      }}
+                      fontSize="2xs"
+                      fontWeight="600"
+                      gap="1.5"
+                      px="3"
+                    >
+                      <LuFileText size={13} />
+                      Paroles
+                    </Button>
+
+                    {/* Outils droite : Partage, Créer similaire, Volume */}
+                    <HStack gap="2">
+                      <IconButton
+                        aria-label="Partager"
+                        size="xs"
+                        variant="ghost"
+                        rounded="full"
+                        color="#b3b3b3"
+                        _hover={{ color: "white" }}
+                        onClick={handleShare}
+                      >
+                        <LuShare2 size={15} />
+                      </IconButton>
+
+                      {/* Volume Slider épuré */}
+                      <HStack gap="1.5" display={{ base: "none", sm: "flex" }}>
+                        <IconButton
+                          aria-label="Mute"
+                          size="xs"
+                          variant="ghost"
+                          color="#b3b3b3"
+                          _hover={{ color: "white" }}
+                          onClick={() => setMuted((m) => !m)}
+                        >
+                          {muted ? <LuVolumeX size={15} /> : <LuVolume2 size={15} />}
+                        </IconButton>
+                        <Box
+                          w="56px"
+                          h="3px"
+                          bg="rgba(255, 255, 255, 0.2)"
+                          rounded="full"
+                          cursor="pointer"
+                          onClick={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const newVol = Math.round((x / rect.width) * 100);
+                            setVolume(Math.max(0, Math.min(100, newVol)));
+                            setMuted(false);
+                          }}
+                          role="group"
+                          _hover={{ h: "4px" }}
+                        >
+                          <Box
+                            h="full"
+                            w={`${muted ? 0 : volume}%`}
+                            bg="white"
+                            rounded="full"
+                            _groupHover={{ bg: accent.primary }}
+                          />
+                        </Box>
+                      </HStack>
+
+                      <Button
+                        size="2xs"
+                        rounded="full"
+                        variant="ghost"
+                        color="#b3b3b3"
+                        _hover={{ color: "white", bg: "rgba(255,255,255,0.08)" }}
+                        onClick={handleCreateSimilar}
+                        fontSize="2xs"
+                        gap="1"
+                        px="2.5"
+                      >
+                        <LuSparkles size={11} color={accent.primary} />
+                        <Text display={{ base: "none", md: "inline" }}>Créer dans ce style</Text>
+                      </Button>
+                    </HStack>
+                  </Flex>
+                </Stack>
+              </Box>
+
+              {/* Mini-carrousel horizontal discret des morceaux (inspiration Spotify playlist queue) */}
+              <Box w="full" maxW="480px" mt="3" display={{ base: "none", sm: "block" }}>
+                <HStack gap="2" overflowX="auto" py="1" px="1">
+                  {filteredTracks.map((tr, idx) => {
+                    const isSelected = idx === currentIndex;
+                    return (
+                      <HStack
+                        key={tr.id}
+                        gap="2"
+                        p="1.5"
+                        pr="3"
+                        rounded="lg"
+                        bg={isSelected ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.03)"}
+                        borderWidth="1px"
+                        borderColor={isSelected ? "rgba(255, 255, 255, 0.15)" : "transparent"}
+                        cursor="pointer"
+                        flexShrink={0}
+                        onClick={() => selectTrack(idx)}
+                        _hover={{ bg: "rgba(255, 255, 255, 0.08)" }}
+                        transition="all 0.2s"
+                      >
+                        <Box
+                          boxSize="28px"
+                          rounded="md"
+                          overflow="hidden"
+                          bg="#181818"
+                          flexShrink={0}
+                        >
+                          <Box as="img" src={tr.cover} alt={tr.title} w="full" h="full" objectFit="cover" />
+                        </Box>
+                        <Box maxW="110px">
+                          <Text fontSize="2xs" fontWeight="600" color={isSelected ? "white" : "#b3b3b3"} truncate>
+                            {tr.title}
+                          </Text>
+                          <Text fontSize="3xs" color="#727272" truncate>
+                            {tr.creator}
+                          </Text>
+                        </Box>
+                      </HStack>
+                    );
+                  })}
+                </HStack>
+              </Box>
+
+              {/* Indicateur de défilement vers le bas */}
+              <Box
+                position="absolute"
+                bottom="2"
+                left="50%"
+                transform="translateX(-50%)"
+                cursor="pointer"
+                onClick={goToNextTrack}
+                p="1.5"
+                rounded="full"
+                bg="rgba(255, 255, 255, 0.05)"
+                _hover={{ bg: "rgba(255, 255, 255, 0.15)", transform: "translateX(-50%) translateY(2px)" }}
+                transition="all 0.2s"
+              >
+                <LuArrowDown size={14} color="#b3b3b3" />
+              </Box>
             </Flex>
-          </Box>
+
+            {/* SECTION DROITE : PAROLES SYNCHRONISÉES (DESKTOP >= 1024px STYLE SPOTIFY) */}
+            {showLyrics && (
+              <Box
+                display={{ base: "none", lg: "flex" }}
+                flex="0.95"
+                h="full"
+                borderLeftWidth="1px"
+                borderColor="rgba(255, 255, 255, 0.06)"
+                bg="rgba(18, 18, 18, 0.75)"
+                backdropFilter="blur(30px)"
+                p="8"
+                flexDirection="column"
+                position="relative"
+                zIndex="20"
+                transition="all 0.4s ease"
+              >
+                {/* En-tête des paroles */}
+                <Flex justify="space-between" align="center" pb="4" borderBottomWidth="1px" borderColor="rgba(255, 255, 255, 0.06)">
+                  <HStack gap="2">
+                    <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="#b3b3b3" textTransform="uppercase" letterSpacing="0.05em">
+                      Paroles
+                    </Text>
+                  </HStack>
+                  <IconButton
+                    size="xs"
+                    variant="ghost"
+                    color="#b3b3b3"
+                    _hover={{ color: "white", bg: "rgba(255, 255, 255, 0.1)" }}
+                    onClick={() => setShowLyrics(false)}
+                    aria-label="Fermer paroles"
+                    rounded="full"
+                  >
+                    <LuX size={15} />
+                  </IconButton>
+                </Flex>
+
+                {/* Défilement karaoké synchronisé avec masque de dégradé style Spotify */}
+                <Box
+                  ref={lyricsContainerRef}
+                  flex="1"
+                  overflowY="auto"
+                  py="12"
+                  px="4"
+                  className="custom-lyrics-scroll"
+                  style={{
+                    maskImage: "linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
+                    WebkitMaskImage: "linear-gradient(180deg, transparent 0%, black 12%, black 88%, transparent 100%)",
+                  }}
+                >
+                  <Stack gap="8">
+                    {currentTrack.lyrics?.map((line, idx) => {
+                      const isActive = idx === currentLyricIndex;
+                      const isPast = idx < currentLyricIndex;
+
+                      return (
+                        <Box
+                          key={idx}
+                          ref={isActive ? activeLyricRef : null}
+                          cursor="pointer"
+                          onClick={() => handleSeekTo(line.time)}
+                          transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                          transform={isActive ? "scale(1.04) translateX(4px)" : "scale(1)"}
+                          opacity={isActive ? 1 : isPast ? 0.35 : 0.65}
+                        >
+                          <Text
+                            fontFamily="heading"
+                            fontWeight={isActive ? "800" : "600"}
+                            fontSize={isActive ? "2xl" : "lg"}
+                            lineHeight="snug"
+                            color={isActive ? "white" : "#a0a0a0"}
+                            textShadow={isActive ? `0 0 20px ${glowColor}` : "none"}
+                            _hover={{ color: "white", opacity: 1 }}
+                          >
+                            {line.text}
+                          </Text>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </Box>
+
+                {/* Pied de page Paroles */}
+                <Flex
+                  justify="space-between"
+                  align="center"
+                  pt="3"
+                  borderTopWidth="1px"
+                  borderColor="rgba(255, 255, 255, 0.06)"
+                  fontSize="2xs"
+                  color="#727272"
+                >
+                  <Text>Synchronisé par IA pretymelo</Text>
+                  <Text>Cliquez sur une phrase pour naviguer</Text>
+                </Flex>
+              </Box>
+            )}
+          </>
         )}
       </Flex>
 
-      {/* 3. TIROIR MODAL PAROLES POUR MOBILE / TABLETTE (< 1024px) */}
-      {showLyrics && (
+      {/* 3. TIROIR MODAL PAROLES MOBILE (< 1024px STYLE SPOTIFY BOTTOM SHEET) */}
+      {showMobileLyrics && currentTrack && (
         <Box
           display={{ base: "flex", lg: "none" }}
           position="fixed"
           inset="0"
           zIndex="50"
-          bg="blackAlpha.900"
-          backdropFilter="blur(20px)"
+          bg="rgba(0, 0, 0, 0.75)"
+          backdropFilter="blur(24px)"
           alignItems="flex-end"
-          onClick={() => setShowLyrics(false)}
+          onClick={() => setShowMobileLyrics(false)}
         >
           <Box
             w="full"
-            maxH="75dvh"
-            h="72dvh"
-            bg="rgba(12, 7, 24, 0.98)"
-            borderTopRadius="3xl"
+            maxH="78dvh"
+            h="74dvh"
+            bg="#181818"
+            borderTopRadius="2xl"
             borderTopWidth="1px"
-            borderColor="rgba(255, 255, 255, 0.16)"
+            borderColor="rgba(255, 255, 255, 0.1)"
             p="5"
             display="flex"
             flexDirection="column"
             onClick={(e) => e.stopPropagation()}
-            boxShadow="0 -15px 45px rgba(0,0,0,0.85)"
+            boxShadow="0 -15px 40px rgba(0, 0, 0, 0.9)"
           >
-            {/* Barre de poignée (drag handle) */}
-            <Box w="40px" h="4px" rounded="full" bg="rgba(255,255,255,0.25)" mx="auto" mb="3" />
+            {/* Poignée de drag */}
+            <Box w="36px" h="4px" rounded="full" bg="rgba(255, 255, 255, 0.2)" mx="auto" mb="3" />
 
-            <Flex justify="space-between" align="center" pb="3" borderBottomWidth="1px" borderColor="rgba(255,255,255,0.1)">
+            <Flex justify="space-between" align="center" pb="3" borderBottomWidth="1px" borderColor="rgba(255, 255, 255, 0.08)">
               <HStack gap="2">
-                <Text fontSize="sm">🎵</Text>
+                <Text fontSize="xs" color={accent.primary}>●</Text>
                 <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="white">
                   Paroles de « {currentTrack.title} »
                 </Text>
@@ -1297,24 +1749,26 @@ export default function ExplorerView() {
               <IconButton
                 size="xs"
                 variant="ghost"
-                color="white"
-                onClick={() => setShowLyrics(false)}
+                color="#b3b3b3"
+                _hover={{ color: "white" }}
+                onClick={() => setShowMobileLyrics(false)}
                 aria-label="Fermer"
+                rounded="full"
               >
                 <LuX size={16} />
               </IconButton>
             </Flex>
 
-            {/* Liste défilante des paroles en mobile */}
+            {/* Paroles défilantes mobile */}
             <Box
               ref={mobileLyricsContainerRef}
               flex="1"
               overflowY="auto"
-              py="5"
-              px="5"
+              py="6"
+              px="4"
               className="custom-lyrics-scroll"
             >
-              <Stack gap="5" textAlign="center">
+              <Stack gap="6" textAlign="center">
                 {currentTrack.lyrics?.map((line, idx) => {
                   const isActive = idx === currentLyricIndex;
                   const isPast = idx < currentLyricIndex;
@@ -1324,17 +1778,17 @@ export default function ExplorerView() {
                       key={idx}
                       ref={isActive ? mobileActiveLyricRef : null}
                       cursor="pointer"
-                      onClick={() => setCurrentTime(line.time)}
+                      onClick={() => handleSeekTo(line.time)}
                       opacity={isActive ? 1 : isPast ? 0.35 : 0.65}
-                      transform={isActive ? "scale(1.05)" : "scale(1)"}
-                      transition="all 0.3s"
+                      transform={isActive ? "scale(1.04)" : "scale(1)"}
+                      transition="all 0.2s"
                     >
                       <Text
                         fontFamily="heading"
                         fontWeight={isActive ? "800" : "600"}
                         fontSize={isActive ? "xl" : "md"}
-                        color={isActive ? currentAccent : "white"}
-                        textShadow={isActive ? `0 0 20px ${currentTrack.glowColor}` : "none"}
+                        color={isActive ? "white" : "#a0a0a0"}
+                        textShadow={isActive ? `0 0 16px ${glowColor}` : "none"}
                       >
                         {line.text}
                       </Text>
@@ -1346,6 +1800,69 @@ export default function ExplorerView() {
           </Box>
         </Box>
       )}
+
+      {/* Styles CSS intégrés pour les animations Spotify & Shimmer loader */}
+      <style jsx global>{`
+        @keyframes lyricSlideUp {
+          0% {
+            opacity: 0;
+            transform: translateY(12px);
+            filter: blur(3px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+          }
+        }
+        @keyframes shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+        .shimmer-box {
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.04) 25%,
+            rgba(255, 255, 255, 0.12) 37%,
+            rgba(255, 255, 255, 0.04) 63%
+          );
+          background-size: 400% 100%;
+          animation: shimmer 1.6s ease-in-out infinite;
+        }
+        @keyframes wave {
+          0% {
+            height: 4px;
+          }
+          100% {
+            height: 18px;
+          }
+        }
+        @keyframes heartBurst {
+          0% {
+            transform: scale(0.2);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.3);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.8);
+            opacity: 0;
+          }
+        }
+        .custom-lyrics-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-lyrics-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+        }
+      `}</style>
     </Box>
   );
 }

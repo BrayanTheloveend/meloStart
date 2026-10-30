@@ -10,8 +10,8 @@ export default function Logo({ size = "md" }) {
   return (
     <NextLink href="/" aria-label="pretymelo, retour à l'accueil">
       <Flex align="center" gap="2.5">
-        <Image src="/assets/logo.png" alt="pretymelo" width={'35px'} height={'35px'} />
-        <Text fontFamily="heading" fontWeight="800" fontSize="xl" letterSpacing="-0.03em">
+        <Image src="/assets/logo.png" alt="pretymelo" width={{md: '35px', base: '25px'}} height={{md: '35px', base: '25px'}} />
+        <Text fontFamily="heading" fontWeight="700" fontSize={{md: "xl", base: 'lg'}} letterSpacing="-0.03em">
           pretymelo
         </Text>
       </Flex>

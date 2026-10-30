@@ -7,7 +7,7 @@ import { accent } from "@/theme/system";
 /** Chiffres clés (idée Paynance "2930M+"). */
 export default function Stats() {
   return (
-    <Box as="section" pb={{ base: "20", md: "28" }}>
+    <Box as="section" pb={{ base: "20", md: "28" }} display={'none'}>
       <Container maxW="7xl">
         <SimpleGrid columns={{ base: 2, md: 4 }} gap="6" p={{ base: "8", md: "12" }} rounded="3xl" bg="paper.100" borderWidth="1px" borderColor="paper.300">
           {stats.map((s) => (

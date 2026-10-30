@@ -85,7 +85,7 @@ export default function Step1MusicPreferences({ data, onChange }) {
                 cursor="pointer"
               >
                 <Flex justify="space-between" align="flex-start" mb="2">
-                  <Text fontSize="2xl">{g.icon}</Text>
+                  {/* <Text fontSize="2xl">{g.icon}</Text> */}
                   <Box
                     boxSize="5"
                     rounded="full"
