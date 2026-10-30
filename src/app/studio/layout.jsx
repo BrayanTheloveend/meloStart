@@ -209,7 +209,7 @@ function StudioLayoutContent({ children }) {
             </Flex>
 
             <Text fontSize="2xs" color="ink.500">
-              Il faut <b>2 notes</b> pour créer 1 musique complète par IA.
+              Il faut <b>2 notes</b> pour créer 1 musique complète.
             </Text>
 
             <Button
