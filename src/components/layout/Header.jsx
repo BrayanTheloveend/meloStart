@@ -123,7 +123,8 @@ export default function Header() {
                     variant="ghost"
                     size="sm"
                     rounded="full"
-                    px={0}
+                    p={0}
+                    pr={1}
                     borderWidth="0.9px"
                     borderColor={userMenuOpen ? "brand.violetDeep" : "paper.200"}
                     _hover={{ borderColor: "brand.violetDeep", bg: "paper.100" }}

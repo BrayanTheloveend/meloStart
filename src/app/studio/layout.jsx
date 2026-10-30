@@ -351,7 +351,7 @@ function StudioLayoutContent({ children }) {
             <Box
               asChild
               rounded="full"
-              p="0.5"
+              // p="0.5"
               borderWidth="2px"
               borderColor={pathname.startsWith("/studio/profil") ? "brand.violetDeep" : "paper.200"}
               boxShadow={pathname.startsWith("/studio/profil") ? "0 0 0 2px rgba(124, 58, 237, 0.3)" : "none"}
