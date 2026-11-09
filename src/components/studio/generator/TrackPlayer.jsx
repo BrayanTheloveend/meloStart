@@ -282,11 +282,7 @@ export default function TrackPlayer({
                   {selectedVoiceData.title}
                 </Badge>
               )}
-              {model && (
-                <Badge px="2" py="0.5" rounded="full" bg="slate.100" color="slate.500" fontSize="2xs">
-                  Suno {model}
-                </Badge>
-              )}
+              
             </HStack>
           </Stack>
 
@@ -294,7 +290,7 @@ export default function TrackPlayer({
           <Box pt="2">
             {/* Barre de progression cliquable */}
             <Box
-              position="relative" w="full" h="8px" bg="slate.100" rounded="full"
+              position="relative" w="full" h="8px" bg="slate.300" rounded="full"
               cursor="pointer" overflow="hidden"
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -310,7 +306,7 @@ export default function TrackPlayer({
             </Box>
 
             {/* Horodatage */}
-            <Flex justify="space-between" mt="2" fontSize="2xs" color="slate.500" fontFamily="mono" fontWeight="600">
+            <Flex justify="space-between" mt="2" fontSize="2xs" color="slate.500" fontFamily="heading" fontWeight="600">
               <Text>{fmtTime(currentTime)}</Text>
               <Text>{fmtTime(totalDuration)}</Text>
             </Flex>
