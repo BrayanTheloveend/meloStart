@@ -1,0 +1,62 @@
+name: Deploy to Production (Hostinger VPS)
+
+on:
+  push:
+    branches:
+      - main
+
+# Évite les déploiements concurrents simultanés si plusieurs merges s'enchaînent
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Auto Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Exécution du déploiement sur le VPS via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            TARGET_DIR="${{ secrets.VPS_APP_DIR || '/var/www/melostart' }}"
+            
+            echo "🚀 Navigation vers $TARGET_DIR..."
+            cd "$TARGET_DIR"
+
+            # Charger l'environnement Node/NVM si nécessaire
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            echo "📥 1/5 - Récupération du code le plus récent (branche main)..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "📦 2/5 - Installation des dépendances..."
+            npm ci --prefer-offline --no-audit
+
+            echo "🗄️ 3/5 - Génération Prisma & synchronisation de la base..."
+            npx prisma generate
+            npx prisma db push
+
+            echo "🏗️ 4/5 - Build de l'application Next.js..."
+            npm run build
+
+            echo "🔄 5/5 - Rechargement de l'application et du worker avec PM2..."
+            if command -v pm2 &> /dev/null; then
+              pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
+              pm2 save
+            else
+              npx pm2 reload ecosystem.config.cjs --update-env || npx pm2 start ecosystem.config.cjs
+              npx pm2 save
+            fi
+
+            echo "✅ Déploiement terminé avec succès !"
+
