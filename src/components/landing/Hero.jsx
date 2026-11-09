@@ -75,7 +75,7 @@ export default function Hero({ initialUsers = null, initialTotalCount = null }) 
   const remainingCount = Math.max(0, displayTotal - displayUsers.length);
 
   return (
-    <Box as="section" position="relative" overflow="hidden" pt={{ base: "32", md: "40" }} pb={{ base: "20", md: "28" }} h={{ md: '215vh', base: '115vh', '2xl': '115vh' }}>
+    <Box as="section" position="relative" overflow="hidden" pt={{ base: "32", md: "40" }} pb={{ base: "20", md: "28" }} h={{ md: '200vh', base: '115vh', '2xl': '115vh' }}>
       <GlowBackground />
       {/* Grille discrète en fond, masquée vers le bas */}
       <Box
@@ -171,7 +171,7 @@ export default function Hero({ initialUsers = null, initialTotalCount = null }) 
           </Flex>
         </Stack>
 
-        <Image src={'/assets/mock13.png'} width={{md: "70%", base: '100%'}} mt={10} alt="mock" />
+        <Image src={'/assets/mock13.png'} width={{md: "50%", base: '100%'}} mt={10} alt="mock" />
 
        
       </Container>
