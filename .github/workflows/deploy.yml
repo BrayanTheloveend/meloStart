@@ -27,7 +27,7 @@ jobs:
           script_stop: true
           script: |
             set -e
-            TARGET_DIR="${{ secrets.VPS_APP_DIR || '/var/www/melostart' }}"
+            TARGET_DIR="${{ secrets.VPS_APP_DIR || '/var/www/meloStart' }}"
             
             echo "🚀 Navigation vers $TARGET_DIR..."
             cd "$TARGET_DIR"
