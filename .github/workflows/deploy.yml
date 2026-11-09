@@ -29,16 +29,45 @@ jobs:
           script_stop: true
           script: |
             set -e
-            TARGET_DIR="${{ secrets.VPS_APP_DIR || '/var/www/meloStart' }}"
-            
-            echo "🚀 Navigation vers $TARGET_DIR..."
-            cd "$TARGET_DIR"
+            # Nettoyer d'éventuels guillemets ou espaces dans le secret
+            RAW_DIR="${{ secrets.VPS_APP_DIR || '/var/www/meloStart' }}"
+            TARGET_DIR=$(echo "$RAW_DIR" | tr -d "'\"" | xargs)
+            REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+
+            echo "👤 Utilisateur connecté sur le VPS : $(whoami)"
+            echo "📍 Dossier de connexion : $(pwd)"
+            echo "🎯 Dossier cible demandé : $TARGET_DIR"
+
+            # Tenter de créer le dossier s'il n'existe pas encore
+            if [ ! -d "$TARGET_DIR" ]; then
+              echo "🛠️ Création du dossier $TARGET_DIR..."
+              mkdir -p "$TARGET_DIR" 2>/dev/null || sudo mkdir -p "$TARGET_DIR" 2>/dev/null || true
+            fi
+
+            # Si impossible d'accéder au dossier (droits restreints sur /var/www par exemple), basculer vers $HOME
+            if ! cd "$TARGET_DIR" 2>/dev/null; then
+              echo "⚠️ Accès refusé à $TARGET_DIR (problème de permissions)."
+              TARGET_DIR="$HOME/meloStart"
+              echo "➡️ Bascule automatique vers le répertoire personnel : $TARGET_DIR"
+              mkdir -p "$TARGET_DIR"
+              cd "$TARGET_DIR"
+            fi
+
+            echo "📂 Dans le dossier de déploiement : $(pwd)"
+
+            # Si le projet n'est pas encore cloné la première fois
+            if [ ! -d ".git" ]; then
+              echo "📦 Premier déploiement : Clonage du projet depuis GitHub..."
+              git clone "$REPO_URL" .
+            fi
 
             # Charger l'environnement Node/NVM si nécessaire
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            export PATH="$PATH:/usr/local/bin:/usr/bin:$HOME/.npm-global/bin"
 
             echo "📥 1/5 - Récupération du code le plus récent (branche main)..."
+            git remote set-url origin "$REPO_URL" || true
             git fetch origin main
             git reset --hard origin/main
 
