@@ -60,7 +60,7 @@ export default function GenreMarquee() {
   const half = Math.ceil(genres.length / 2);
 
   return (
-    <Box as="section" py={{ base: "12", md: "16" }} overflow="hidden">
+    <Box as="section" pb={{ base: "12", md: "16" }} overflow="hidden">
       <Container maxW="7xl">
         <Heading
           as="h2"
