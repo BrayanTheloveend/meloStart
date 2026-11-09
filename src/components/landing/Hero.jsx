@@ -75,7 +75,7 @@ export default function Hero({ initialUsers = null, initialTotalCount = null }) 
   const remainingCount = Math.max(0, displayTotal - displayUsers.length);
 
   return (
-    <Box as="section" position="relative" overflow="hidden" pt={{ base: "32", md: "40" }} pb={{ base: "20", md: "28" }} h={{ md: '170vh', base: '115vh', '2xl': '115vh' }}>
+    <Box as="section" position="relative" overflow="hidden" pt={{ base: "32", md: "40" }} pb={{ base: "20", md: "28" }} h={{ md: '215vh', base: '115vh', '2xl': '115vh' }}>
       <GlowBackground />
       {/* Grille discrète en fond, masquée vers le bas */}
       <Box
@@ -147,7 +147,7 @@ export default function Hero({ initialUsers = null, initialTotalCount = null }) 
                     bg="paper.200"
                   >
                     <Avatar.Fallback fontSize="xs" fontWeight="700" color="ink.700">
-                      +{remainingCount > 999 ? formatMetric(remainingCount, { uppercaseK: false }) : remainingCount}
+                      + {remainingCount > 999 ? formatMetric(remainingCount, { uppercaseK: false }) : remainingCount}
                     </Avatar.Fallback>
                   </Avatar.Root>
                 )}
