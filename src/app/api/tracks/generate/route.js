@@ -64,17 +64,18 @@ export async function POST(req) {
     const isInstrumental = Boolean(instrumental);
     const isAdmin = session.user?.role === "ADMIN";
     const trackIsPublic = reqIsPublic !== undefined ? Boolean(reqIsPublic) : Boolean(isAdmin);
+    const cleanStyle = (style && typeof style === "string" && style.trim().toLowerCase() !== "none") ? style.trim() : "";
 
     // Validation des entrées selon la documentation Suno
     if (isCustom) {
-      if (!lyrics?.trim() && !prompt?.trim() && !style?.trim()) {
+      if (!lyrics?.trim() && !prompt?.trim() && !cleanStyle) {
         return NextResponse.json(
           { error: "En mode personnalisé, veuillez renseigner les paroles, une description ou un style de musique." },
           { status: 400 }
         );
       }
     } else {
-      if (!prompt?.trim() && !style?.trim() && !lyrics?.trim() && !imageUrls?.length && !videoUrls?.length && !audioUrls?.length) {
+      if (!prompt?.trim() && !cleanStyle && !lyrics?.trim() && !imageUrls?.length && !videoUrls?.length && !audioUrls?.length) {
         return NextResponse.json(
           { error: "Veuillez renseigner une description de chanson ou un style musical." },
           { status: 400 }
@@ -115,8 +116,8 @@ export async function POST(req) {
     } else if (prompt?.trim()) {
       const words = prompt.trim().split(/\s+/).slice(0, 5).join(" ");
       derivedTitle = words.charAt(0).toUpperCase() + words.slice(1);
-    } else if (style?.trim()) {
-      derivedTitle = `${style.trim().split(",")[0]} Pretymelo`;
+    } else if (cleanStyle) {
+      derivedTitle = `${cleanStyle.split(",")[0]} Pretymelo`;
     } else {
       derivedTitle = "Nouvelle Création IA";
     }
@@ -134,9 +135,9 @@ export async function POST(req) {
       data: {
         userId,
         title: derivedTitle,
-        prompt: prompt?.trim() || style?.trim() || "Génération musicale IA",
+        prompt: prompt?.trim() || cleanStyle || "Génération musicale IA",
         lyrics: lyrics?.trim() || null,
-        genre: style?.trim() || "Pop",
+        genre: cleanStyle || "Libre",
         moods: [],
         vocalType: vocalTypeValue,
         language: "Français",
@@ -159,7 +160,7 @@ export async function POST(req) {
         model,
         // Paramètres standard
         prompt: prompt?.trim(),
-        style: style?.trim(),
+        style: cleanStyle || undefined,
         lyrics: lyrics?.trim(),
         imageUrls: Array.isArray(imageUrls) ? imageUrls : [],
         videoUrls: Array.isArray(videoUrls) ? videoUrls : [],

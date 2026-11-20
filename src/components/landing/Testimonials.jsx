@@ -4,12 +4,21 @@ import { Avatar, Box, Container, HStack, SimpleGrid, Stack, Text } from "@chakra
 import { LuStar } from "react-icons/lu";
 import SectionHead from "@/components/common/SectionHead";
 import Reveal from "@/components/common/Reveal";
+import DecorativeGlowGroup from "@/components/common/DecorativeGlowGroup";
 import { testimonials } from "@/data/content";
 
 export default function Testimonials() {
   return (
-    <Box as="section" pb={{ base: "20", md: "28" }}>
-      <Container maxW="7xl">
+    <Box as="section" pb={{ base: "20", md: "28" }} position="relative" overflow="hidden">
+      {/* Halo décoratif Purple & Pink en intersection */}
+      <DecorativeGlowGroup
+        top={{ base: "0%", md: "5%" }}
+        left={{ base: "-100px", sm: "-50px", lg: "0px" }}
+        size={{ base: "280px", sm: "360px", md: "460px" }}
+        opacity={0.25}
+      />
+
+      <Container maxW="7xl" position="relative" zIndex="1">
         <Reveal>
           <SectionHead pill="Avis" title="Ils créent déjà avec pretymelo" />
         </Reveal>

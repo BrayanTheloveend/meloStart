@@ -13,7 +13,7 @@ export default function StepStyle({ musicStyle, onSelect, onNext }) {
           Quel style de musique ?
         </Text>
         <Text fontSize="sm" color="ink.500">
-          Choisis l&apos;ambiance de ta chanson
+          Choisis l&apos;ambiance de ta chanson (ou laisse l&apos;IA s&apos;adapter à ton histoire)
         </Text>
       </Stack>
 
@@ -22,12 +22,14 @@ export default function StepStyle({ musicStyle, onSelect, onNext }) {
         gap="2.5" maxW="520px" mx="auto" w="full"
       >
         {MUSIC_STYLES.map((s) => {
-          const isSelected = musicStyle === s.id;
+          const isSelected = musicStyle === s.id || (!musicStyle && s.id === "none");
           return (
             <Box
               key={s.id} as="button" type="button"
               onClick={() => onSelect(s)}
-              py="3" px="2" display="flex" gap={3} flexDirection="column" alignItems="center"
+              py="3" px="2" display="flex" gap={2.5} flexDirection="column" alignItems="center"
+              justifyContent="center"
+              minH="95px"
               rounded="2xl"
               bg={isSelected ? "brand.violetTint" : "paper.0"}
               borderWidth={isSelected ? "2px" : "1.5px"}
@@ -37,8 +39,13 @@ export default function StepStyle({ musicStyle, onSelect, onNext }) {
               transition="all 0.2s" cursor="pointer" textAlign="center"
             >
               <Image src={s.icon} alt={s.title} w="35px" h="35px" mx="auto" />
-              <Text fontFamily="ui" fontSize="2xs"
-                color={isSelected ? "brand.violetDeep" : "ink.800"} truncate>
+              <Text
+                fontFamily="ui"
+                fontSize="2xs"
+                lineHeight="1.2"
+                noOfLines={2}
+                color={isSelected ? "brand.violetDeep" : "ink.800"}
+              >
                 {s.title}
               </Text>
             </Box>

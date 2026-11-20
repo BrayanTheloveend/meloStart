@@ -4,7 +4,7 @@ import {
   Badge, Box, Button, Flex, HStack, Image, Input,
   SimpleGrid, Stack, Text,
 } from "@chakra-ui/react";
-import { LANGUAGES, flagUrl } from "./constants";
+import { LANGUAGES, MUSIC_STYLES, flagUrl } from "./constants";
 import { SUNO_MODELS } from "@/services/musicAiApi";
 
 /**
@@ -80,8 +80,15 @@ export default function StepConfirm({
           {/* Style */}
           <Flex justify="space-between" align="center" borderBottomWidth="1px" borderColor="slate.100" pb="2">
             <Text fontSize="xs" color="slate.500">Style musical</Text>
-            <Badge px="2.5" py="0.5" rounded="full" bg="purple.50" color="purple.700" fontSize="xs" fontWeight="700">
-              {musicStyle}
+            <Badge
+              px="2.5" py="0.5" rounded="full"
+              bg={(!musicStyle || musicStyle === "none") ? "slate.100" : "purple.50"}
+              color={(!musicStyle || musicStyle === "none") ? "slate.700" : "purple.700"}
+              fontSize="xs" fontWeight="700"
+            >
+              {(!musicStyle || musicStyle === "none")
+                ? "Aucun style prédéfini (Libre)"
+                : (MUSIC_STYLES.find((s) => s.id === musicStyle)?.title || musicStyle)}
             </Badge>
           </Flex>
 

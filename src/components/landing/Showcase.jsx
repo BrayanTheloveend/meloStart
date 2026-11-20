@@ -268,7 +268,7 @@ export default function Showcase() {
                   </Text>
                 </Heading>
                 <Text color="ink.500" fontSize="lg" maxW="md">
-                  Écoutez les créations officielles générées en quelques secondes avec notre studio IA.
+                  Écoutez les créations officielles générées en quelques secondes avec notre Studio.
                 </Text>
               </Stack>
 

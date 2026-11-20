@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Container, Flex, Grid, Heading, Stack, Text } from "@chakra-ui/react";
+import { Box, Container, Flex, Grid, Heading, Image, Stack, Text } from "@chakra-ui/react";
 import Reveal from "@/components/common/Reveal";
 import SectionHead from "@/components/common/SectionHead";
 import { steps } from "@/data/content";
@@ -17,7 +17,62 @@ export default function HowItWorks() {
         <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} rounded="3xl" overflow="hidden" borderWidth="1px" borderColor="paper.300" bg="paper.50">
           <Flex direction="column" justify="center" gap="6" p={{ base: "8", md: "14" }} position="relative" overflow="hidden">
             <Box position="absolute" inset="0" bg="brand.violetTint" />
-            <Reveal position="relative">
+            
+            {/* Vecteurs décoratifs aux 4 coins */}
+            <Image
+              src="/assets/vectors/vect1.png"
+              alt=""
+              position="absolute"
+              rotate={'140deg'}
+              top={-14}
+              left="0"
+              w={{ base: "80px", sm: "110px", md: "140px" }}
+              h="auto"
+              pointerEvents="none"
+              userSelect="none"
+              zIndex="1"
+            />
+            <Image
+              src="/assets/vectors/vect2.png"
+              alt=""
+              position="absolute"
+              rotate={'-140deg'}
+              top={-10}
+              right="0"
+              w={{ base: "80px", sm: "110px", md: "140px" }}
+              h="auto"
+              pointerEvents="none"
+              userSelect="none"
+              zIndex="1"
+            />
+            <Image
+              src="/assets/vectors/vect3.png"
+              alt=""
+              position="absolute"
+              rotate={'40deg'}
+              bottom={-8}
+              left={-4}
+              w={{ base: "80px", sm: "110px", md: "140px" }}
+              h="auto"
+              pointerEvents="none"
+              userSelect="none"
+              zIndex="1"
+            />
+            <Image
+              src="/assets/vectors/vect4.png"
+              alt=""
+              position="absolute"
+              rotate={'-40deg'}
+              bottom={-3}
+              right={-10}
+              w={{ base: "80px", sm: "110px", md: "140px" }}
+              h="auto"
+              pointerEvents="none"
+              userSelect="none"
+              zIndex="1"
+            />
+
+            <Reveal position="relative" zIndex="2">
               <Stack gap="5">
                 <Heading as="h2" fontFamily="heading" fontWeight="800" fontSize={{ base: "3xl", md: "5xl" }} letterSpacing="-0.035em" lineHeight="1.05">
                   Votre chanson en trois étapes

@@ -3,6 +3,7 @@
 import { Accordion, Box, Container, Span } from "@chakra-ui/react";
 import SectionHead from "@/components/common/SectionHead";
 import Reveal from "@/components/common/Reveal";
+import DecorativeGlowGroup from "@/components/common/DecorativeGlowGroup";
 import { faqs } from "@/data/content";
 
 /** FAQ : Accordion Chakra UI v3 (Accordion.Root / Item / ItemTrigger / ItemContent). */
@@ -21,12 +22,21 @@ export default function Faq() {
   };
 
   return (
-    <Box as="section" id="faq" pb={{ base: "20", md: "28" }} scrollMarginTop="80px">
+    <Box as="section" id="faq" pb={{ base: "20", md: "28" }} scrollMarginTop="80px" position="relative" overflow="hidden">
+      {/* Halo décoratif Purple & Pink en intersection */}
+      <DecorativeGlowGroup
+        top={{ base: "8%", md: "15%" }}
+        right={{ base: "-100px", sm: "-50px", lg: "4%" }}
+        size={{ base: "280px", sm: "360px", md: "460px" }}
+        opacity={0.24}
+        reversed={true}
+      />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
-      <Container maxW="3xl">
+      <Container maxW="3xl" position="relative" zIndex="1">
         <Reveal>
           <SectionHead pill="FAQ" title="Questions fréquentes" />
         </Reveal>
