@@ -63,7 +63,7 @@ export default function GeneratorPanel({
   const [instrumental, setInstrumental] = useState(false);
 
   // ── Étape 4 : Style ──────────────────────────────────
-  const [musicStyle, setMusicStyle] = useState(initialData.musicStyle || "Afrobeat");
+  const [musicStyle, setMusicStyle] = useState(initialData.musicStyle || "none");
 
   // ── Étape 5 : Pochette (coverUrl) ────────────────────
   const [coverUrl, setCoverUrl] = useState(initialData.coverUrl || "");
@@ -199,13 +199,13 @@ export default function GeneratorPanel({
 
     setStatus("generating");
     setProgress(15);
-    setStepLabel("Transmission des consignes créatives au studio IA...");
+    setStepLabel("Transmission des consignes créatives au studio...");
     setGenerationError("");
     setWasRefunded(false);
 
     const isCustom = Boolean(customMode || lyrics.trim() || customTitle.trim() || negativeTags.trim());
     const isInst = instrumental || vocalType === "instrumental";
-    const finalStyle = musicStyle;
+    const finalStyle = (musicStyle === "none" || !musicStyle) ? "" : musicStyle;
     const finalLyrics = isInst ? "" : lyrics.trim();
     let promptText = story.trim();
 

@@ -71,7 +71,7 @@ export default function GenreMarquee() {
           color="ink.700"
           mb={{ base: "8", md: "10" }}
         >
-          Plus de 120 styles musicaux, du classique au dernier tube du moment
+          13 styles musicaux, du classique au dernier tube du moment
         </Heading>
       </Container>
 

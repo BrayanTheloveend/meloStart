@@ -37,6 +37,7 @@ export const VOICE_TYPES = [
 
 // Étape 4 : Styles de musique reconnus officiellement par Suno AI
 export const MUSIC_STYLES = [
+  { id: "none",         title: "Aucun style prédéfini", shortTitle: "Aucun style", icon: "/assets/4.png", desc: "Laisser l'IA s'adapter librement à l'histoire" },
   { id: "Pop",          title: "Pop",           icon: "/assets/genre/1.png"  },
   { id: "Afrobeat",     title: "Afrobeat",      icon: "/assets/genre/3.png"  },
   { id: "Amapiano",     title: "Amapiano",      icon: "/assets/genre/6.png"  },

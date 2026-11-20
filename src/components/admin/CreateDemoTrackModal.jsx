@@ -78,7 +78,7 @@ export default function CreateDemoTrackModal({ isOpen, onClose, onSuccess, notif
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json.error || "Erreur génération");
 
-        if (notify) notify("🚀 Génération IA Suno V6 démarrée ! Elle apparaîtra à l'accueil une fois prête.");
+        if (notify) notify("🚀 Génération démarrée ! Elle apparaîtra à l'accueil une fois prête.");
       }
 
       if (onSuccess) onSuccess();

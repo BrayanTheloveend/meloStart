@@ -146,7 +146,9 @@ export default function TrackPlayer({
   // Priorité absolue : image uploadée par l'utilisateur > image Suno
   const displayCover = localTrack?.coverUrl || null;
   const trackTitle = localTrack?.title || customTitle || "Morceau généré";
-  const trackGenre = localTrack?.genre || musicStyle || "Afrobeat";
+  const trackGenre = (localTrack?.genre && localTrack.genre !== "none")
+    ? localTrack.genre
+    : (musicStyle && musicStyle !== "none" ? musicStyle : "Libre");
   const progressPercent = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
 
   return (

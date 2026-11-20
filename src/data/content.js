@@ -149,8 +149,8 @@ export const testimonials = [
 
 export const faqs = [
   {
-    q: "Comment générer de la musique avec l'IA sur pretymelo ?",
-    a: "Il vous suffit de décrire votre idée (genre musical, thème, paroles ou émotions) : notre générateur de musique par IA compose la mélodie, écrit les paroles et interprète le morceau avec une voix réaliste en moins de 30 secondes.",
+    q: "Comment générer de la musique avec pretymelo ?",
+    a: "Il vous suffit de décrire votre idée (genre musical, thème, paroles ou émotions) : notre générateur de musique compose la mélodie, écrit les paroles et interprète le morceau avec une voix réaliste en moins de 30 secondes.",
   },
   {
     q: "Peut-on créer une chanson gratuite sans carte bancaire ?",
@@ -175,10 +175,6 @@ export const faqs = [
   {
     q: "Dans quelles langues puis-je créer les paroles ?",
     a: "Le français, l'anglais, l'espagnol, le portugais et plusieurs autres langues sont parfaitement interprétés par l'IA vocale.",
-  },
-  {
-    q: "Puis-je annuler mon abonnement à tout moment ?",
-    a: "Oui, à tout moment depuis votre compte en un clic. Vous gardez l'accès jusqu'à la fin de la période payée.",
   },
 ];
 

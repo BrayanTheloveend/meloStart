@@ -21,6 +21,7 @@ import {
   LuCheck,
   LuEye,
   LuEyeOff,
+  LuFingerprint,
   LuLock,
   LuMail,
 } from "react-icons/lu";
@@ -46,6 +47,7 @@ export default function LoginForm() {
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState("");
+  const [debugResetUrl, setDebugResetUrl] = useState("");
 
   const handleGoogleSuccess = async () => {
     setLoading(true);
@@ -154,20 +156,42 @@ export default function LoginForm() {
     }
   };
 
-  const handleForgotSubmit = (e) => {
+  const handleForgotSubmit = async (e) => {
     e.preventDefault();
     setForgotError("");
+    setDebugResetUrl("");
 
-    if (!forgotEmail.trim() || !forgotEmail.includes("@")) {
-      setForgotError("Veuillez renseigner un email valide.");
+    const cleanEmail = forgotEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setForgotError("Veuillez renseigner une adresse email valide.");
       return;
     }
 
     setForgotLoading(true);
-    setTimeout(() => {
-      setForgotLoading(false);
+
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Une erreur est survenue lors de l'envoi de l'email.");
+      }
+
+      if (data.debugResetUrl) {
+        setDebugResetUrl(data.debugResetUrl);
+      }
+
       setForgotSent(true);
-    }, 600);
+    } catch (err) {
+      setForgotError(err?.message || "Impossible de traiter votre demande pour le moment.");
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
@@ -248,6 +272,7 @@ export default function LoginForm() {
                     position="absolute"
                     left="3.5"
                     top="50%"
+                    zIndex={10}
                     transform="translateY(-50%)"
                     color="ink.400"
                     pointerEvents="none"
@@ -318,9 +343,10 @@ export default function LoginForm() {
                     top="50%"
                     transform="translateY(-50%)"
                     color="ink.400"
+                    zIndex={10}
                     pointerEvents="none"
                   >
-                    <LuLock size={18} />
+                    <LuFingerprint size={18} />
                   </Box>
                   <Input
                     id="login-password"
@@ -477,6 +503,32 @@ export default function LoginForm() {
                 </Text>
               </Box>
 
+              {debugResetUrl && (
+                <Box
+                  p="3"
+                  rounded="xl"
+                  bg="amber.50"
+                  borderWidth="1px"
+                  borderColor="amber.200"
+                  textAlign="left"
+                >
+                  <Text fontSize="2xs" fontWeight="700" color="amber.900" mb="1">
+                    ⚡ Mode développement (Simulation d&apos;email) :
+                  </Text>
+                  <NextLink href={debugResetUrl}>
+                    <Text
+                      fontSize="2xs"
+                      color="brand.violetDeep"
+                      fontWeight="600"
+                      wordBreak="break-all"
+                      _hover={{ textDecoration: "underline" }}
+                    >
+                      Ouvrir le lien de réinitialisation généré →
+                    </Text>
+                  </NextLink>
+                </Box>
+              )}
+
               <Button
                 variant="outline"
                 h="11"
@@ -488,6 +540,7 @@ export default function LoginForm() {
                 onClick={() => {
                   setView("login");
                   setForgotSent(false);
+                  setDebugResetUrl("");
                 }}
               >
                 <LuArrowLeft size={14} style={{ marginRight: "6px" }} /> Retour à la connexion
@@ -514,6 +567,7 @@ export default function LoginForm() {
                       position="absolute"
                       left="3.5"
                       top="50%"
+                      zIndex={10}
                       transform="translateY(-50%)"
                       color="ink.400"
                       pointerEvents="none"
