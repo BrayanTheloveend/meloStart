@@ -268,6 +268,7 @@ export async function getTransactionStatus(reference) {
       amount: 5000,
       currency: "XAF",
       operator: "MTN",
+      reason: "",
       isSimulation: true,
     };
   }
@@ -302,8 +303,116 @@ export async function getTransactionStatus(reference) {
     currency: data.currency || "XAF",
     operator: data.operator,
     code: data.code,
+    reason: data.reason || data.fail_reason || data.operator_message || data.message || "",
+    operatorMessage: data.operator_message || "",
     operatorReference: data.operator_reference,
     externalReference: data.external_reference,
+    raw: data,
+  };
+}
+
+/**
+ * Analyse et traduit les causes d'échec retournées par CamPay et les opérateurs mobiles camerounais.
+ * Permet d'informer précisément l'utilisateur (solde insuffisant, rejet client, PIN erroné, timeout, etc.).
+ *
+ * @param {Object} campayData Données renvoyées par CamPay
+ * @param {string} [preferredOperator] Opérateur sélectionné ("mtn" | "orange")
+ */
+export function parseFailureReason(campayData = {}, preferredOperator = "") {
+  const opUpper = (campayData.operator || preferredOperator || "").toUpperCase();
+  const opName = opUpper.includes("ORANGE")
+    ? "Orange Money"
+    : opUpper.includes("MTN")
+    ? "MTN MoMo"
+    : "votre compte mobile";
+
+  const rawText = [
+    campayData.code,
+    campayData.reason,
+    campayData.message,
+    campayData.operatorMessage,
+    campayData.operator_message,
+    campayData.fail_reason,
+    campayData.error,
+    campayData.description,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  // 1. Solde insuffisant (MTN MoMo / Orange Money)
+  if (
+    rawText.includes("insufficient") ||
+    rawText.includes("solde") ||
+    rawText.includes("not enough") ||
+    rawText.includes("balance") ||
+    rawText.includes("er301") ||
+    rawText.includes("low balance") ||
+    rawText.includes("fonds")
+  ) {
+    return {
+      type: "INSUFFICIENT_FUNDS",
+      title: "Solde insuffisant",
+      message: `Votre solde ${opName} est insuffisant pour finaliser cet achat. Veuillez recharger votre compte mobile puis réessayer.`,
+      isInsufficientFunds: true,
+    };
+  }
+
+  // 2. Annulation ou refus par l'utilisateur
+  if (
+    rawText.includes("cancel") ||
+    rawText.includes("annul") ||
+    rawText.includes("reject") ||
+    rawText.includes("refus") ||
+    rawText.includes("declined") ||
+    rawText.includes("user_cancel")
+  ) {
+    return {
+      type: "USER_CANCELLED",
+      title: "Paiement refusé",
+      message: `La demande de débit a été refusée ou annulée depuis votre téléphone.`,
+      isInsufficientFunds: false,
+    };
+  }
+
+  // 3. Code secret erroné
+  if (
+    rawText.includes("wrong pin") ||
+    rawText.includes("incorrect pin") ||
+    rawText.includes("bad pin") ||
+    rawText.includes("invalid pin") ||
+    rawText.includes("code secret erroné")
+  ) {
+    return {
+      type: "WRONG_PIN",
+      title: "Code secret incorrect",
+      message: `Le code PIN saisi sur votre téléphone est incorrect.`,
+      isInsufficientFunds: false,
+    };
+  }
+
+  // 4. Délai expiré / Timeout
+  if (
+    rawText.includes("timeout") ||
+    rawText.includes("expired") ||
+    rawText.includes("expire") ||
+    rawText.includes("delay") ||
+    rawText.includes("timed out")
+  ) {
+    return {
+      type: "TIMEOUT",
+      title: "Délai expiré",
+      message: `Le délai de confirmation (environ 60 secondes) a expiré avant la saisie de votre code secret.`,
+      isInsufficientFunds: false,
+    };
+  }
+
+  // 5. Message d'échec général lié à l'opérateur
+  return {
+    type: "PAYMENT_FAILED",
+    title: "Paiement non abouti",
+    message: `La transaction n'a pas pu être validée par ${opName}. Vérifiez que votre solde mobile est suffisant et validez le pop-up USSD sur votre écran dès qu'il apparaît.`,
+    isInsufficientFunds: false,
   };
 }
 
@@ -400,4 +509,206 @@ export async function fulfillPaymentOrder(referenceOrOrderId, extraDetails = {})
     };
   });
 }
+
+/**
+ * SOLDE DE L'APPLICATION (API DÉDIÉE CAMPAY) :
+ * Interroge l'endpoint officiel CamPay pour récupérer le montant exact collecté et disponible.
+ * Endpoint : GET /api/balance/
+ *
+ * @returns {Promise<{totalBalance: number, mtnBalance: number, orangeBalance: number, currency: string, isLive: boolean}>}
+ */
+export async function getCampayBalance() {
+  const token = await getCampayToken();
+
+  // Mode simulation locale ou clés non configurées : calcul sur les PaymentOrder SUCCESSFUL en base
+  if (token === "SIMULATED_DEV_TOKEN") {
+    const [totalAgg, mtnAgg, orangeAgg] = await Promise.all([
+      prisma.paymentOrder.aggregate({
+        _sum: { amount: true },
+        where: { status: "SUCCESSFUL" },
+      }),
+      prisma.paymentOrder.aggregate({
+        _sum: { amount: true },
+        where: { status: "SUCCESSFUL", operator: { contains: "MTN", mode: "insensitive" } },
+      }),
+      prisma.paymentOrder.aggregate({
+        _sum: { amount: true },
+        where: { status: "SUCCESSFUL", operator: { contains: "ORANGE", mode: "insensitive" } },
+      }),
+    ]);
+
+    return {
+      totalBalance: totalAgg._sum.amount || 0,
+      mtnBalance: mtnAgg._sum.amount || 0,
+      orangeBalance: orangeAgg._sum.amount || 0,
+      currency: "XAF",
+      isLive: false,
+    };
+  }
+
+  const endpoint = `${CAMPAY_BASE_URL.replace(/\/$/, "")}/balance/`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Authorization": `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.warn(`[CamPay Balance Warning] Code ${res.status}: ${errorText}`);
+
+      // Fallback sur la base de données
+      const totalAgg = await prisma.paymentOrder.aggregate({
+        _sum: { amount: true },
+        where: { status: "SUCCESSFUL" },
+      });
+
+      return {
+        totalBalance: totalAgg._sum.amount || 0,
+        mtnBalance: 0,
+        orangeBalance: 0,
+        currency: "XAF",
+        isLive: true,
+        fallback: true,
+      };
+    }
+
+    const data = await res.json();
+    return {
+      totalBalance: Number(data.total_balance ?? data.balance ?? 0),
+      mtnBalance: Number(data.mtn_balance ?? 0),
+      orangeBalance: Number(data.orange_balance ?? 0),
+      currency: data.currency || "XAF",
+      isLive: true,
+      raw: data,
+    };
+  } catch (err) {
+    console.error("[CamPay Balance Error] Impossible d'interroger /api/balance/ :", err.message);
+    const totalAgg = await prisma.paymentOrder.aggregate({
+      _sum: { amount: true },
+      where: { status: "SUCCESSFUL" },
+    });
+
+    return {
+      totalBalance: totalAgg._sum.amount || 0,
+      mtnBalance: 0,
+      orangeBalance: 0,
+      currency: "XAF",
+      isLive: false,
+      fallback: true,
+    };
+  }
+}
+
+/**
+ * HISTORIQUE OFFICIEL DES TRANSACTIONS (API DÉDIÉE CAMPAY) :
+ * Interroge l'endpoint POST /api/history/ de CamPay pour récupérer l'historique complet des transactions.
+ * Documentation officielle : https://documenter.getpostman.com/view/2391374/T1LV8PVA
+ *
+ * Paramètres du corps (JSON) :
+ * - start_date : YYYY-MM-DD (Requis, max 1 an dans le passé)
+ * - end_date : YYYY-MM-DD (Requis)
+ * - page : entier (Optionnel)
+ * - items_per_page : entier (Optionnel)
+ *
+ * @param {Object} [params]
+ * @param {string} [params.startDate]
+ * @param {string} [params.endDate]
+ * @param {number} [params.page=1]
+ * @param {number} [params.itemsPerPage=100]
+ * @returns {Promise<{transactions: Array, total: number, isLive: boolean}>}
+ */
+export async function getCampayTransactionHistory({
+  startDate,
+  endDate,
+  page = 1,
+  itemsPerPage = 100,
+} = {}) {
+  const token = await getCampayToken();
+
+  // Plage de dates par défaut (par défaut les 90 derniers jours jusqu'à aujourd'hui)
+  const now = new Date();
+  const defaultEnd = now.toISOString().split("T")[0];
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const defaultStart = ninetyDaysAgo.toISOString().split("T")[0];
+
+  const payload = {
+    start_date: startDate || defaultStart,
+    end_date: endDate || defaultEnd,
+    page: Number(page) || 1,
+    items_per_page: Number(itemsPerPage) || 100,
+  };
+
+  if (token === "SIMULATED_DEV_TOKEN") {
+    return {
+      transactions: [],
+      total: 0,
+      isLive: false,
+      isSimulation: true,
+    };
+  }
+
+  const endpoint = `${CAMPAY_BASE_URL.replace(/\/$/, "")}/history/`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `Token ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await res.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (_) {
+      console.warn(`[CamPay History Warning] Réponse non-JSON (${res.status}): ${responseText}`);
+      return { transactions: [], total: 0, isLive: true, rawError: responseText };
+    }
+
+    if (!res.ok) {
+      console.warn(`[CamPay History Warning] Code ${res.status}:`, data);
+      return { transactions: [], total: 0, isLive: true, error: data };
+    }
+
+    // Normalisation des différentes structures possibles de retour CamPay
+    const rawList = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.data?.transactions)
+      ? data.data.transactions
+      : Array.isArray(data?.transactions)
+      ? data.transactions
+      : Array.isArray(data?.data)
+      ? data.data
+      : [];
+
+    const total = data?.data?.total || data?.total || rawList.length;
+
+    return {
+      transactions: rawList,
+      total,
+      page: payload.page,
+      itemsPerPage: payload.items_per_page,
+      isLive: true,
+      raw: data,
+    };
+  } catch (err) {
+    console.error("[CamPay History Error] Impossible d'interroger /api/history/ :", err.message);
+    return {
+      transactions: [],
+      total: 0,
+      isLive: false,
+      error: err.message,
+    };
+  }
+}
+
+
 

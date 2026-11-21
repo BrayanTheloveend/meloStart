@@ -95,12 +95,51 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    let isCancelled = false;
+    Promise.all([
+      api.get("/api/admin/stats").catch(() => null),
+      api.get("/api/admin/tracks?limit=5").catch(() => null),
+      api.get("/api/admin/transactions?limit=3").catch(() => null),
+      api.get("/api/admin/system").catch(() => null),
+    ])
+      .then(([statsRes, tracksRes, txRes, sysRes]) => {
+        if (isCancelled) return;
+        if (statsRes?.stats) {
+          setStats(statsRes.stats);
+          if (statsRes.popularGenres?.length) {
+            setPopularGenres(statsRes.popularGenres);
+          }
+        }
+        if (tracksRes?.tracks) {
+          setRecentTracks(tracksRes.tracks);
+        }
+        if (txRes?.transactions) {
+          setRecentTransactions(txRes.transactions);
+        }
+        if (sysRes?.services) {
+          setSystemServices(sysRes.services.slice(0, 3));
+        }
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        console.warn("[Admin Dashboard] Erreur synchronisation API:", err.message);
+        setFetchError("Certaines données n'ont pas pu être synchronisées en direct.");
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    fetchDashboardData();
+    await fetchDashboardData();
   };
 
   const handleTogglePlay = (track) => {
@@ -178,7 +217,7 @@ export default function AdminDashboardPage() {
             <NextLink href="/dashboard/tracks">
               <HStack gap="2">
                 <LuWandSparkles size={14} />
-                <Text>Superviser l'IA</Text>
+                <Text>Superviser l&apos;IA</Text>
               </HStack>
             </NextLink>
           </Button>
@@ -195,7 +234,7 @@ export default function AdminDashboardPage() {
           ))
         ) : (
           <>
-            {/* KPI 1 : Revenu total */}
+            {/* KPI 1 : Revenu total collecté via CamPay */}
             <Box
               p="5"
               rounded="2xl"
@@ -206,21 +245,28 @@ export default function AdminDashboardPage() {
             >
               <Flex justify="space-between" align="flex-start" mb="3">
                 <Text fontSize="xs" fontWeight="700" color="ink.500" textTransform="uppercase" letterSpacing="0.05em">
-                  Chiffre d'Affaires
+                  Montant Collecté (CamPay)
                 </Text>
                 <Box p="2" rounded="xl" bg="green.50" color="green.600">
                   <LuCreditCard size={18} />
                 </Box>
               </Flex>
-              <Text fontFamily="heading" fontWeight="800" fontSize="2xl" letterSpacing="-0.03em">
+              <Text fontFamily="heading" fontWeight="800" fontSize="2xl" letterSpacing="-0.03em" color="ink.900">
                 {stats?.revenueTotal || "0 XAF"}
               </Text>
-              <HStack gap="1.5" mt="2">
-                <Badge colorPalette="green" size="sm" rounded="full" px="2" display="inline-flex" alignItems="center" gap="1">
-                  <LuArrowUpRight size={12} />
-                  {stats?.revenueGrowth || "Paiements réels"}
-                </Badge>
-              </HStack>
+              <Stack gap="1" mt="2">
+                <HStack gap="1.5">
+                  <Badge colorPalette="green" size="sm" rounded="full" px="2" display="inline-flex" alignItems="center" gap="1">
+                    <LuArrowUpRight size={12} />
+                    Collecte CamPay API
+                  </Badge>
+                </HStack>
+                {stats?.campayBalance && (stats.campayBalance.mtn > 0 || stats.campayBalance.orange > 0) && (
+                  <Text fontSize="2xs" color="ink.500" fontWeight="600">
+                    MTN: {Number(stats.campayBalance.mtn).toLocaleString("fr-FR")} XAF • Orange: {Number(stats.campayBalance.orange).toLocaleString("fr-FR")} XAF
+                  </Text>
+                )}
+              </Stack>
             </Box>
 
             {/* KPI 2 : Utilisateurs */}
@@ -273,7 +319,7 @@ export default function AdminDashboardPage() {
               </Text>
               <HStack gap="1.5" mt="2">
                 <Badge colorPalette="purple" size="sm" rounded="full" px="2">
-                  +{stats?.tracksToday || 0} aujourd'hui ({stats?.tracksSuccessRate || "100%"} succès)
+                  +{stats?.tracksToday || 0} aujourd&apos;hui ({stats?.tracksSuccessRate || "100%"} succès)
                 </Badge>
               </HStack>
             </Box>
@@ -327,7 +373,7 @@ export default function AdminDashboardPage() {
                 Styles musicaux les plus demandés
               </Text>
               <Text fontSize="xs" color="ink.500">
-                Volume de production par catégorie sur l'ensemble des titres créés
+                Volume de production par catégorie sur l&apos;ensemble des titres créés
               </Text>
             </Stack>
             <Badge variant="subtle" size="sm" rounded="full">
@@ -386,7 +432,7 @@ export default function AdminDashboardPage() {
           <Flex justify="space-between" align="center" mb="5">
             <Stack gap="0.5">
               <Text fontFamily="heading" fontWeight="700" fontSize="lg">
-                Statut de l'infrastructure
+                Statut de l&apos;infrastructure
               </Text>
               <Text fontSize="xs" color="ink.500">
                 Monitoring BullMQ, Redis, PostgreSQL & Suno AI
@@ -571,7 +617,7 @@ export default function AdminDashboardPage() {
                       </Badge>
                     </HStack>
                     <Text fontSize="xs" color="ink.500" truncate maxW="500px">
-                      Par {t.user?.name || "Anonyme"} • "{t.prompt || "Sans description"}"
+                      Par {t.user?.name || "Anonyme"} • &quot;{t.prompt || "Sans description"}&quot;
                     </Text>
                   </Stack>
                 </HStack>
@@ -589,7 +635,7 @@ export default function AdminDashboardPage() {
                   )}
                   {t.status === "QUEUED" && (
                     <Badge colorPalette="purple" size="sm" rounded="full" px="2">
-                      En file d'attente
+                      En file d&apos;attente
                     </Badge>
                   )}
                   {t.status === "FAILED" && (
@@ -660,7 +706,7 @@ export default function AdminDashboardPage() {
                   Aucune transaction enregistrée
                 </Text>
                 <Text fontSize="xs" color="ink.400">
-                  Les recharges de packs de Notes Stripe & Mobile Money s'afficheront ici.
+                  Les recharges de packs de Notes Stripe & Mobile Money s&apos;afficheront ici.
                 </Text>
               </Stack>
             </Box>

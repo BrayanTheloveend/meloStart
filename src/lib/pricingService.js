@@ -187,3 +187,86 @@ export async function savePricingPlansToDb(plans) {
 
   return normalized;
 }
+
+export const DEFAULT_FEE_SETTINGS = {
+  passFeesToCustomer: true, // par défaut le client paie les 2% de frais
+  feePercentage: 2,         // 2% de frais de collecte CamPay
+};
+
+const PAYMENT_FEE_SETTING_KEY = "payment_fee_settings";
+
+/**
+ * Récupère les paramètres de frais de collecte CamPay depuis PostgreSQL.
+ */
+export async function getPaymentFeeSettingsFromDb() {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: PAYMENT_FEE_SETTING_KEY },
+    });
+
+    if (setting?.value) {
+      const parsed = JSON.parse(setting.value);
+      return {
+        passFeesToCustomer: Boolean(parsed.passFeesToCustomer),
+        feePercentage: Number(parsed.feePercentage) >= 0 ? Number(parsed.feePercentage) : 2,
+      };
+    }
+
+    return DEFAULT_FEE_SETTINGS;
+  } catch (err) {
+    console.warn("[Payment Fee Service] Erreur lecture paramètres de frais :", err.message);
+    return DEFAULT_FEE_SETTINGS;
+  }
+}
+
+/**
+ * Enregistre les paramètres de frais de collecte CamPay dans PostgreSQL.
+ */
+export async function savePaymentFeeSettingsToDb(settings) {
+  const normalized = {
+    passFeesToCustomer: Boolean(settings?.passFeesToCustomer),
+    feePercentage: Number(settings?.feePercentage) >= 0 ? Number(settings.feePercentage) : 2,
+  };
+
+  await prisma.systemSetting.upsert({
+    where: { key: PAYMENT_FEE_SETTING_KEY },
+    update: {
+      value: JSON.stringify(normalized),
+      description: "Paramètres des frais de collecte CamPay (prise en charge client ou plateforme)",
+    },
+    create: {
+      key: PAYMENT_FEE_SETTING_KEY,
+      value: JSON.stringify(normalized),
+      description: "Paramètres des frais de collecte CamPay (prise en charge client ou plateforme)",
+    },
+  });
+
+  return normalized;
+}
+
+/**
+ * Calcule le montant final à débiter et les frais associés pour un tarif de base donné.
+ */
+export async function calculatePaymentAmount(basePrice) {
+  const feeSettings = await getPaymentFeeSettingsFromDb();
+  const price = Number(basePrice) || 0;
+
+  if (!feeSettings.passFeesToCustomer || feeSettings.feePercentage <= 0) {
+    return {
+      basePrice: price,
+      feePercentage: feeSettings.feePercentage,
+      feeAmount: 0,
+      totalAmount: price,
+      passFeesToCustomer: false,
+    };
+  }
+
+  const feeAmount = Math.round(price * (feeSettings.feePercentage / 100));
+  return {
+    basePrice: price,
+    feePercentage: feeSettings.feePercentage,
+    feeAmount,
+    totalAmount: price + feeAmount,
+    passFeesToCustomer: true,
+  };
+}

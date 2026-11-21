@@ -22,6 +22,7 @@ import {
   LuEyeOff,
   LuLayers,
   LuPencil,
+  LuPercent,
   LuPlus,
   LuRotateCcw,
   LuSparkles,
@@ -57,6 +58,8 @@ const EMPTY_PLAN = {
 
 export default function PricingSettingsManager({ onNotify }) {
   const [plans, setPlans] = useState([]);
+  const [feeSettings, setFeeSettings] = useState({ passFeesToCustomer: true, feePercentage: 2 });
+  const [isSavingFees, setIsSavingFees] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null); // null si aucun formulaire ouvert
@@ -68,11 +71,13 @@ export default function PricingSettingsManager({ onNotify }) {
   };
 
   const fetchPlans = async () => {
-    setIsLoading(true);
     try {
       const res = await api.get("/api/admin/pricing");
       if (res?.plans) {
         setPlans(res.plans);
+      }
+      if (res?.feeSettings) {
+        setFeeSettings(res.feeSettings);
       }
     } catch (err) {
       console.error("[PricingManager] Erreur chargement:", err);
@@ -82,8 +87,54 @@ export default function PricingSettingsManager({ onNotify }) {
     }
   };
 
+  const handleUpdateFeeSettings = async (updated) => {
+    setFeeSettings(updated);
+    setIsSavingFees(true);
+    try {
+      const res = await api.post("/api/admin/pricing", {
+        feeSettings: updated,
+      });
+      if (res?.feeSettings) {
+        setFeeSettings(res.feeSettings);
+      }
+      showToast(
+        updated.passFeesToCustomer
+          ? "Politique CamPay : Les frais de 2% seront facturés au client."
+          : "Politique CamPay : Les frais de 2% seront offerts (absorbés par la plateforme)."
+      );
+    } catch (err) {
+      showToast("Erreur lors de la sauvegarde des frais : " + err.message);
+    } finally {
+      setIsSavingFees(false);
+    }
+  };
+
   useEffect(() => {
-    fetchPlans();
+    let isCancelled = false;
+    api
+      .get("/api/admin/pricing")
+      .then((res) => {
+        if (isCancelled) return;
+        if (res?.plans) {
+          setPlans(res.plans);
+        }
+        if (res?.feeSettings) {
+          setFeeSettings(res.feeSettings);
+        }
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        console.error("[PricingManager] Erreur chargement:", err);
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   const handleOpenCreate = () => {
@@ -262,6 +313,81 @@ export default function PricingSettingsManager({ onNotify }) {
         </HStack>
       </Flex>
 
+      {/* Configuration des Frais de Collecte CamPay (2%) */}
+      <Box
+        p="4"
+        mb="6"
+        rounded="2xl"
+        bg="paper.50"
+        border="1.5px solid"
+        borderColor={feeSettings.passFeesToCustomer ? "brand.violetDeep" : "paper.200"}
+      >
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          justify="space-between"
+          align={{ base: "flex-start", md: "center" }}
+          gap="4"
+        >
+          <HStack gap="3" align="start">
+            <Box p="2" rounded="xl" bg="brand.violetTint" color="brand.violetDeep" mt="0.5">
+              <LuPercent size={18} />
+            </Box>
+            <Stack gap="1">
+              <HStack gap="2" wrap="wrap">
+                <Text fontFamily="heading" fontWeight="700" fontSize="sm" color="ink.900">
+                  Prise en charge des frais de collecte CamPay ({feeSettings.feePercentage}%)
+                </Text>
+                <Badge
+                  px="2"
+                  py="0.5"
+                  rounded="full"
+                  fontSize="2xs"
+                  fontWeight="700"
+                  bg={feeSettings.passFeesToCustomer ? "purple.100" : "green.100"}
+                  color={feeSettings.passFeesToCustomer ? "purple.700" : "green.700"}
+                >
+                  {feeSettings.passFeesToCustomer ? "Facturés au client" : "Offerts par la plateforme"}
+                </Badge>
+              </HStack>
+              <Text fontSize="xs" color="ink.500" maxW="2xl">
+                {feeSettings.passFeesToCustomer
+                  ? `Le client paie les ${feeSettings.feePercentage}% de frais de transaction CamPay lors de son débit (ex: pour 2 500 FCFA, 2 550 FCFA sont prélevés).`
+                  : `La plateforme absorbe les ${feeSettings.feePercentage}% de frais CamPay. Le client paie le tarif exact du pack (ex: 2 500 FCFA prélevés).`}
+              </Text>
+            </Stack>
+          </HStack>
+
+          <HStack gap="2" alignSelf={{ base: "stretch", md: "center" }}>
+            <Button
+              size="sm"
+              rounded="xl"
+              variant={feeSettings.passFeesToCustomer ? "solid" : "outline"}
+              bg={feeSettings.passFeesToCustomer ? "brand.violetDeep" : undefined}
+              color={feeSettings.passFeesToCustomer ? "white" : "ink.700"}
+              onClick={() => handleUpdateFeeSettings({ ...feeSettings, passFeesToCustomer: true })}
+              loading={isSavingFees}
+              fontSize="xs"
+              fontWeight="700"
+            >
+              Client paie les 2%
+            </Button>
+            <Button
+              size="sm"
+              rounded="xl"
+              variant={!feeSettings.passFeesToCustomer ? "solid" : "outline"}
+              bg={!feeSettings.passFeesToCustomer ? "brand.violetDeep" : undefined}
+              color={!feeSettings.passFeesToCustomer ? "white" : "ink.700"}
+              onClick={() => handleUpdateFeeSettings({ ...feeSettings, passFeesToCustomer: false })}
+              loading={isSavingFees}
+              fontSize="xs"
+              fontWeight="700"
+            >
+              Frais offerts (Plateforme)
+            </Button>
+          </HStack>
+        </Flex>
+      </Box>
+
       {/* Contenu : Liste des packs ou état de chargement */}
       {isLoading ? (
         <Flex py="12" justify="center" align="center" direction="column" gap="3">
@@ -276,7 +402,7 @@ export default function PricingSettingsManager({ onNotify }) {
             Aucun pack tarifaire configuré
           </Text>
           <Text fontSize="xs" color="ink.500" mb="4">
-            Créez votre première offre pour permettre à vos utilisateurs d'acheter des Notes.
+            Créez votre première offre pour permettre à vos utilisateurs d&apos;acheter des Notes.
           </Text>
           <Button size="sm" rounded="xl" bg="brand.violetDeep" color="white" onClick={handleOpenCreate}>
             <LuPlus size={15} /> Créer un premier pack

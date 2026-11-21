@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
-import { getPricingPlansFromDb, savePricingPlansToDb } from "@/lib/pricingService";
+import {
+  getPricingPlansFromDb,
+  savePricingPlansToDb,
+  getPaymentFeeSettingsFromDb,
+  savePaymentFeeSettingsToDb,
+} from "@/lib/pricingService";
 
 /**
  * GET /api/admin/pricing
- * Récupère tous les plans tarifaires (actifs et inactifs) pour l'administration.
+ * Récupère tous les plans tarifaires (actifs et inactifs) et la politique de frais pour l'administration.
  */
 export async function GET() {
   try {
@@ -18,11 +23,13 @@ export async function GET() {
     }
 
     const plans = await getPricingPlansFromDb();
+    const feeSettings = await getPaymentFeeSettingsFromDb();
     const sorted = [...plans].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
     return NextResponse.json({
       success: true,
       plans: sorted,
+      feeSettings,
     });
   } catch (error) {
     console.error("[API Admin Pricing GET] Erreur:", error);
@@ -35,7 +42,7 @@ export async function GET() {
 
 /**
  * POST /api/admin/pricing
- * Crée un nouveau plan tarifaire ou remplace la liste complète (ex: réordonnancement).
+ * Crée un nouveau plan tarifaire, met à jour les frais de collecte ou remplace la liste complète.
  */
 export async function POST(req) {
   try {
@@ -49,6 +56,17 @@ export async function POST(req) {
     }
 
     const body = await req.json();
+
+    // Cas 0 : Mise à jour de la politique de frais de paiement CamPay (2% client ou plateforme)
+    if (body.feeSettings) {
+      const savedFees = await savePaymentFeeSettingsToDb(body.feeSettings);
+      return NextResponse.json({
+        success: true,
+        message: "Politique des frais de collecte CamPay mise à jour avec succès.",
+        feeSettings: savedFees,
+      });
+    }
+
     let currentPlans = await getPricingPlansFromDb();
 
     // Cas 1 : Remplacement complet / Réordonnancement global
