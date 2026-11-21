@@ -531,8 +531,8 @@ export default function PricingSettingsManager({ onNotify }) {
                   </Text>
                   <Input
                     type="number"
-                    min={0}
-                    step={100}
+                    // min={0}
+                    // step={100}
                     size="sm"
                     rounded="xl"
                     placeholder="2500"
