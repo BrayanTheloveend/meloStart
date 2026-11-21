@@ -99,12 +99,60 @@ export async function getPricingPlansFromDb() {
     }
 
     // Initialisation automatique avec les plans par défaut
-    await savePricingPlansToDb([]);
-    return [];
+    await savePricingPlansToDb(DEFAULT_PRICING_PLANS);
+    return DEFAULT_PRICING_PLANS;
   } catch (error) {
     console.warn("[Pricing Service] Impossible de charger les tarifs depuis PostgreSQL, utilisation des valeurs par défaut :", error.message);
-    return [];
+    return DEFAULT_PRICING_PLANS;
   }
+}
+
+/**
+ * Recherche et retourne un pack configuré dans la base de données (settings admin).
+ * @param {string} packId - ID ou nom du pack
+ * @returns {Promise<{ id: string, name: string, notes: number, price: number, amount: number, currency: string } | null>}
+ */
+export async function getPricingPlanById(packId) {
+  const plans = await getPricingPlansFromDb();
+  if (!plans || plans.length === 0) return null;
+
+  const cleanId = String(packId || "").trim().toLowerCase();
+
+  // 1. Recherche par ID exact
+  let match = plans.find((p) => String(p.id).toLowerCase() === cleanId);
+
+  // 2. Recherche par nom exact ou partiel
+  if (!match) {
+    match = plans.find((p) => String(p.name).toLowerCase() === cleanId);
+  }
+  if (!match) {
+    match = plans.find((p) =>
+      cleanId.includes(String(p.id).toLowerCase()) ||
+      cleanId.includes(String(p.name).toLowerCase()) ||
+      String(p.name).toLowerCase().includes(cleanId)
+    );
+  }
+
+  // 3. Fallback sur le pack actif par défaut (ex: populaire ou premier actif)
+  if (!match) {
+    match = plans.find((p) => p.isActive && p.popular) || plans.find((p) => p.isActive) || plans[0];
+  }
+
+  if (!match) return null;
+
+  const notes = Number(match.notes ?? match.note ?? 4);
+  const price = Number(match.price) || 0;
+
+  return {
+    ...match,
+    id: match.id,
+    name: match.name,
+    notes,
+    note: notes,
+    price,
+    amount: price,
+    currency: match.currency || "XAF",
+  };
 }
 
 /**

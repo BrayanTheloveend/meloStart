@@ -2,7 +2,7 @@ import AuthShell from "@/components/auth/AuthShell";
 
 export const metadata = {
   title: "Authentification | pretymelo",
-  description: "Connectez-vous ou créez votre compte pretymelo pour générer des morceaux uniques par IA.",
+  description: "Connectez-vous ou créez votre compte pretymelo pour générer des morceaux uniques .",
 };
 
 export default function AuthLayout({ children }) {

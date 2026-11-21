@@ -20,8 +20,10 @@ import {
   LuCheck,
   LuEye,
   LuEyeOff,
+  LuFingerprint,
   LuLock,
   LuMail,
+  LuPlus,
   LuSparkles,
   LuUser,
   LuZap,
@@ -296,6 +298,7 @@ export default function SignupForm() {
                     position="absolute"
                     left="3.5"
                     top="50%"
+                    zIndex={10}
                     transform="translateY(-50%)"
                     color="ink.400"
                     pointerEvents="none"
@@ -346,11 +349,12 @@ export default function SignupForm() {
                     position="absolute"
                     left="3.5"
                     top="50%"
+                    zIndex={10}
                     transform="translateY(-50%)"
                     color="ink.400"
                     pointerEvents="none"
                   >
-                    <LuLock size={17} />
+                    <LuFingerprint size={17} />
                   </Box>
                   <Input
                     id="signup-password"
@@ -379,6 +383,7 @@ export default function SignupForm() {
                     position="absolute"
                     right="2"
                     top="50%"
+                    zIndex={10}
                     transform="translateY(-50%)"
                     variant="ghost"
                     size="xs"
@@ -420,12 +425,17 @@ export default function SignupForm() {
                 transition="all 0.2s ease"
               >
                 <HStack gap="2">
-                  {loading && (
+                  {loading ? (
                     <>
                       <Spinner size="sm" color="white" />
                       <Text>Création du compte...</Text>
                     </>
-                  ) }
+                  ) : (
+                    <>
+                      <LuPlus size={17} />
+                      <Text>Créer mon compte</Text>
+                    </>
+                  )}
                 </HStack>
               </Button>
             </Stack>

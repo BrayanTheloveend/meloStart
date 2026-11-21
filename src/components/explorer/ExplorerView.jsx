@@ -301,7 +301,7 @@ export default function ExplorerView() {
           const dbTracks = rawList.map((t) => ({
             id: t.id,
             title: t.title || "Titre sans nom",
-            subtitle: t.prompt || `${t.genre || "Afrobeat"} composé par IA`,
+            subtitle: t.prompt || `${t.genre || "Afrobeat"} `,
             genre: t.genre || "Afrobeat",
             creator: t.user?.name || "Artiste pretymelo",
             duration: t.duration || 120,
@@ -320,7 +320,7 @@ export default function ExplorerView() {
                   text: line,
                 }))
               : [
-                  { id: 1, time: 0, text: "♪ Mélodie composée par IA pretymelo ♪" },
+                  { id: 1, time: 0, text: "♪ Mélodie composée  pretymelo ♪" },
                   { id: 2, time: 6, text: t.prompt || "Harmonies vocales et rythmes captivants" },
                 ],
           }));
@@ -1701,7 +1701,7 @@ export default function ExplorerView() {
                   fontSize="2xs"
                   color="#727272"
                 >
-                  <Text>Synchronisé par IA pretymelo</Text>
+                  <Text>Synchronisé par pretymelo</Text>
                   <Text>Cliquez sur une phrase pour naviguer</Text>
                 </Flex>
               </Box>

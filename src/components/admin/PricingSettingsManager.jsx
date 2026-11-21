@@ -16,7 +16,6 @@ import {
   Textarea,
 } from "@chakra-ui/react";
 import {
-  LuAlertCircle,
   LuCheck,
   LuCoins,
   LuEye,

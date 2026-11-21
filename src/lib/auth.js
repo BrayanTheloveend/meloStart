@@ -6,14 +6,24 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
+// Durée de validité normale de la session & du token JWT :
+// Par défaut 24 heures (86400 secondes = 1 jour), ou configurable via SESSION_MAX_AGE_HOURS / SESSION_MAX_AGE_SECONDS dans .env
+const SESSION_MAX_AGE =
+  Number(process.env.SESSION_MAX_AGE_SECONDS) ||
+  (Number(process.env.SESSION_MAX_AGE_HOURS) ? Number(process.env.SESSION_MAX_AGE_HOURS) * 3600 : 24 * 60 * 60);
+
 /**
  * Options de configuration pour NextAuth.js.
  */
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
+  jwt: {
+    maxAge: SESSION_MAX_AGE, // Expiration réelle du token JWT (24h)
+  },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 jours
+    maxAge: SESSION_MAX_AGE, // Durée de session normale (24h au lieu de 30 jours)
+    updateAge: 60 * 60, // Rafraîchit l'expiration du cookie uniquement après 1 heure d'activité
   },
   pages: {
     signIn: "/login",

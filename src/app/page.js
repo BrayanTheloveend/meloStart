@@ -17,9 +17,10 @@ import { prisma } from "@/lib/prisma";
 export default async function HomePage() {
   let initialUsers = [];
   let totalUsers = 0;
+  let initialTestimonials = [];
 
   try {
-    const [users, count] = await Promise.all([
+    const [users, count, dbTestimonials] = await Promise.all([
       prisma.user.findMany({
         take: 4,
         orderBy: { createdAt: "desc" },
@@ -30,11 +31,25 @@ export default async function HomePage() {
         },
       }),
       prisma.user.count(),
+      prisma.testimonial.findMany({
+        where: { isApproved: true },
+        take: 6,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          text: true,
+          rating: true,
+          avatarUrl: true,
+        },
+      }),
     ]);
     initialUsers = users;
     totalUsers = count;
+    initialTestimonials = dbTestimonials;
   } catch (error) {
-    console.warn("[HomePage] Impossible de charger les utilisateurs de la BDD pour le Hero:", error?.message || error);
+    console.warn("[HomePage] Impossible de charger les données BDD pour la page d'accueil:", error?.message || error);
   }
 
   return (
@@ -49,7 +64,7 @@ export default async function HomePage() {
         <HowItWorks />
         <Stats />
         <Pricing />
-        <Testimonials />
+        <Testimonials items={initialTestimonials} />
         <Faq />
         <CtaBanner />
       </main>

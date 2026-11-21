@@ -109,6 +109,8 @@ model User {
   sessions           Session[]
   tracks             Track[]
   creditTransactions CreditTransaction[]
+  testimonials       Testimonial[]
+  paymentOrders      PaymentOrder[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -201,3 +203,63 @@ model AdminLog {
   @@index([createdAt])
   @@map("admin_logs")
 }
+
+model Testimonial {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name       String
+  role       String?  @default("Créateur")
+  avatarUrl  String?  @map("avatar_url")
+  rating     Int      @default(5)
+  text       String   @db.Text
+  trackId    String?  @map("track_id")
+  isApproved Boolean  @default(true) @map("is_approved")
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([isApproved])
+  @@index([createdAt])
+  @@map("testimonials")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  EXPIRED
+}
+
+model PaymentOrder {
+  id                String        @id @default(cuid())
+  userId            String        @map("user_id")
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packId            String        @map("pack_id")
+  notes             Int
+  amount            Int           // Montant en FCFA (XAF)
+  currency          String        @default("XAF")
+  provider          String        @default("CAMPAY") // CAMPAY | STRIPE
+  paymentType       String        @default("DIRECT") // DIRECT (USSD Push) | LINK (Hosted checkout)
+  reference         String?       @unique // Référence unique Campay
+  externalReference String        @unique @map("external_reference") // Référence interne pretymelo
+  phone             String?
+  operator          String?       // MTN | ORANGE
+  status            PaymentStatus @default(PENDING)
+  paymentLink       String?       @map("payment_link")
+  operatorReference String?       @map("operator_reference")
+  metadata          Json?
+  creditedAt        DateTime?     @map("credited_at")
+
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([reference])
+  @@index([externalReference])
+  @@index([status])
+  @@map("payment_orders")
+}
+
+

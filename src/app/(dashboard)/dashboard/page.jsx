@@ -262,7 +262,7 @@ export default function AdminDashboardPage() {
             >
               <Flex justify="space-between" align="flex-start" mb="3">
                 <Text fontSize="xs" fontWeight="700" color="ink.500" textTransform="uppercase" letterSpacing="0.05em">
-                  Musiques IA Créées
+                  Musiques Créées
                 </Text>
                 <Box p="2" rounded="xl" bg="brand.violetTint" color="brand.violetDeep">
                   <LuMusic size={18} />

@@ -110,7 +110,7 @@ export default function Configurator({ config, setConfig, onGenerate, busy, note
         />
       </Box>
 
-      {/* Mode de paroles (Généré par IA ou écrites par vous) */}
+      {/* Mode de paroles (Généré ou écrites par vous) */}
       <Box p="4" rounded="2xl" bg="paper.50" borderWidth="1px" borderColor="paper.200">
         <Flex justify="space-between" align="center" mb="3">
           <Text fontFamily="ui" fontWeight="600" fontSize="sm" color="ink.900">
