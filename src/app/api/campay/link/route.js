@@ -70,16 +70,19 @@ export async function POST(req) {
         failureRedirectUrl,
       });
     } catch (campayError) {
+      // Log serveur détaillé pour le débogage technique
+      console.error("🔴 [CamPay Link Failed - Server Log]:", campayError.message || campayError);
+
       await prisma.paymentOrder.update({
         where: { id: paymentOrder.id },
         data: {
           status: "FAILED",
-          metadata: { error: campayError.message },
+          metadata: { rawError: campayError.message || String(campayError) },
         },
       });
 
       return NextResponse.json(
-        { error: campayError.message || "Impossible de générer le lien de paiement." },
+        { error: "Le service de paiement Mobile Money est momentanément indisponible. Veuillez réessayer dans quelques instants." },
         { status: 502 }
       );
     }

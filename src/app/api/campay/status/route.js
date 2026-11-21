@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getTransactionStatus, fulfillPaymentOrder } from "@/lib/campayService";
+import { getTransactionStatus, fulfillPaymentOrder, parseFailureReason } from "@/lib/campayService";
 
 /**
  * GET /api/campay/status?reference=...&orderId=...
@@ -100,15 +100,27 @@ export async function GET(req) {
     }
 
     if (liveStatus.status === "FAILED") {
+      const failureDetails = parseFailureReason(liveStatus, order.operator);
+
       await prisma.paymentOrder.update({
         where: { id: order.id },
-        data: { status: "FAILED" },
+        data: {
+          status: "FAILED",
+          metadata: {
+            ...(order.metadata && typeof order.metadata === "object" ? order.metadata : {}),
+            failureDetails,
+            rawCampayStatus: liveStatus.raw || liveStatus,
+          },
+        },
       });
 
       return NextResponse.json({
-        success: true,
+        success: false,
         status: "FAILED",
-        message: "La transaction a été refusée ou a expiré sur votre mobile.",
+        failureReason: failureDetails.type,
+        isInsufficientFunds: failureDetails.isInsufficientFunds,
+        title: failureDetails.title,
+        message: failureDetails.message,
       });
     }
 

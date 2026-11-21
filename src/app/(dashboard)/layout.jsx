@@ -77,7 +77,7 @@ const NAV_GROUPS = [
       {
         href: "/dashboard/transactions",
         icon: LuCreditCard,
-        label: "Transactions Stripe",
+        label: "Transactions",
         badge: null,
       },
       {

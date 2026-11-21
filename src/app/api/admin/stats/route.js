@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCampayBalance } from "@/lib/campayService";
 
 /**
  * GET /api/admin/stats
@@ -34,6 +35,7 @@ export async function GET() {
       genreAggregates,
       purchaseTransactions,
       allNegativeTransactions,
+      campayBalanceResult,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: oneWeekAgo } } }),
@@ -57,12 +59,19 @@ export async function GET() {
         _sum: { amount: true },
         where: { amount: { lt: 0 } },
       }),
+      getCampayBalance().catch((err) => {
+        console.warn("[Admin Stats] Échec récupération balance CamPay:", err.message);
+        return { totalBalance: 0, mtnBalance: 0, orangeBalance: 0, currency: "XAF", isLive: false };
+      }),
     ]);
 
-    // Calcul du chiffre d'affaires
-    const totalRevenueCfa = purchaseTransactions.reduce((acc, tx) => {
+    const campayBalance = campayBalanceResult || { totalBalance: 0, mtnBalance: 0, orangeBalance: 0, currency: "XAF", isLive: false };
+
+    // Calcul du chiffre d'affaires : priorité au montant exact collecté par CamPay
+    const dbRevenueCfa = purchaseTransactions.reduce((acc, tx) => {
       return acc + (tx.amountMoney || 0);
     }, 0);
+    const finalRevenue = campayBalance.totalBalance > 0 ? campayBalance.totalBalance : dbRevenueCfa;
 
     const notesPurchased = purchaseTransactions.reduce((acc, tx) => acc + tx.amount, 0);
     const notesBurned = Math.abs(allNegativeTransactions._sum.amount || 0);
@@ -88,7 +97,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       stats: {
-        revenueTotal: `${totalRevenueCfa.toLocaleString("fr-FR")} XAF`,
+        revenueTotal: `${finalRevenue.toLocaleString("fr-FR")} XAF`,
+        campayBalance,
         usersTotal,
         usersNewThisWeek: `+${usersNewThisWeek}`,
         tracksGenerated: tracksTotal,

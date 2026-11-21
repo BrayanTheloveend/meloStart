@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerAuthSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getPricingPlanById } from "@/lib/pricingService";
+import { getPricingPlanById, calculatePaymentAmount } from "@/lib/pricingService";
 import { collectDirectPayment, formatCampayPhoneNumber, detectCarrier } from "@/lib/campayService";
 
 /**
@@ -38,6 +38,9 @@ export async function POST(req) {
       );
     }
 
+    // 2. Calcul du montant final selon la politique de frais CamPay configurée par l'admin
+    const paymentCalc = await calculatePaymentAmount(pack.price || pack.amount);
+
     const normalizedPhone = formatCampayPhoneNumber(phone);
     if (!normalizedPhone || normalizedPhone.length < 9) {
       return NextResponse.json(
@@ -49,13 +52,13 @@ export async function POST(req) {
     const operator = detectCarrier(normalizedPhone);
     const externalReference = `melo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    // 2. Création de la commande de paiement en base de données (PENDING)
+    // 3. Création de la commande de paiement en base de données (PENDING)
     const paymentOrder = await prisma.paymentOrder.create({
       data: {
         userId: session.user.id,
         packId: pack.id,
         notes: pack.notes,
-        amount: pack.amount,
+        amount: paymentCalc.totalAmount, // Montant total à prélever
         currency: "XAF",
         provider: "CAMPAY",
         paymentType: "DIRECT",
@@ -66,36 +69,52 @@ export async function POST(req) {
         metadata: {
           userEmail: session.user.email,
           packName: pack.name,
+          basePrice: paymentCalc.basePrice,
+          feeAmount: paymentCalc.feeAmount,
+          feePercentage: paymentCalc.feePercentage,
+          passFeesToCustomer: paymentCalc.passFeesToCustomer,
         },
       },
     });
 
-    // 3. Appel de l'API CamPay Collect
+    // 4. Appel de l'API CamPay Collect
     let campayRes;
     try {
       campayRes = await collectDirectPayment({
-        amount: pack.amount,
+        amount: paymentCalc.totalAmount,
         from: normalizedPhone,
         description: `Recharge ${pack.name} (${pack.notes} Notes) - pretymelo`,
         externalReference,
       });
     } catch (campayError) {
-      // Marquer la commande comme échouée
+      // Log serveur détaillé pour le débogage technique (visible uniquement dans la console / logs)
+      console.error("🔴 [CamPay Collect Failed - Server Log]:", campayError.message || campayError);
+
+      // Marquer la commande comme échouée avec l'erreur brute enregistrée pour l'audit
       await prisma.paymentOrder.update({
         where: { id: paymentOrder.id },
         data: {
           status: "FAILED",
-          metadata: { error: campayError.message },
+          metadata: {
+            rawError: campayError.message || String(campayError),
+            operator,
+            phone: normalizedPhone,
+            paymentCalc,
+          },
         },
       });
 
+      // Message utilisateur propre et orienté opérateur (masque les erreurs d'infrastructure ou de clés API)
+      const operatorLabel = operator === "MTN" ? "MTN MoMo" : operator === "Orange" ? "Orange Money" : "Mobile Money";
+      const userFriendlyMessage = `Le service de paiement ${operatorLabel} est momentanément indisponible ou subit des perturbations réseau. Veuillez réessayer dans quelques instants.`;
+
       return NextResponse.json(
-        { error: campayError.message || "Impossible de contacter l'opérateur Mobile Money pour le moment." },
+        { error: userFriendlyMessage },
         { status: 502 }
       );
     }
 
-    // 4. Mise à jour de la commande avec la référence CamPay (UUID)
+    // 5. Mise à jour de la commande avec la référence CamPay (UUID)
     await prisma.paymentOrder.update({
       where: { id: paymentOrder.id },
       data: {
@@ -111,9 +130,12 @@ export async function POST(req) {
       status: campayRes.status || "PENDING",
       operator: campayRes.operator || operator,
       notes: pack.notes,
-      amount: pack.amount,
+      amount: paymentCalc.totalAmount,
+      baseAmount: paymentCalc.basePrice,
+      feeAmount: paymentCalc.feeAmount,
+      passFeesToCustomer: paymentCalc.passFeesToCustomer,
       currency: "XAF",
-      message: `Demande de débit envoyée sur votre téléphone ${operator} (${normalizedPhone}). Veuillez valider en entrant votre code secret PIN.`,
+      message: `Demande de débit de ${paymentCalc.totalAmount.toLocaleString()} FCFA envoyée sur votre téléphone ${operator} (${normalizedPhone}). Veuillez valider en entrant votre code secret PIN.`,
     });
   } catch (error) {
     console.error("[POST /api/campay/collect] Erreur :", error);
