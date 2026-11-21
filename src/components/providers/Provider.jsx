@@ -62,7 +62,7 @@ function AppLoader() {
 /** Fournit NextAuth SessionProvider + Chakra UI v3 + thème clair forcé. */
 export default function Provider({ children }) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={true}>
       <ChakraProvider value={system}>
         <ThemeProvider attribute="class" forcedTheme="light" disableTransitionOnChange>
           <Suspense fallback={<AppLoader />}>

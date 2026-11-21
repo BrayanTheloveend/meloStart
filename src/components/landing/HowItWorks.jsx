@@ -23,10 +23,11 @@ export default function HowItWorks() {
               src="/assets/vectors/vect1.png"
               alt=""
               position="absolute"
+              display={{base: 'none', md: 'block'}}
               rotate={'140deg'}
               top={-14}
               left="0"
-              w={{ base: "80px", sm: "110px", md: "140px" }}
+              w={{ base: "80px", sm: "110px", md: "100px" }}
               h="auto"
               pointerEvents="none"
               userSelect="none"
@@ -39,7 +40,7 @@ export default function HowItWorks() {
               rotate={'-140deg'}
               top={-10}
               right="0"
-              w={{ base: "80px", sm: "110px", md: "140px" }}
+              w={{ base: "80px", sm: "110px", md: "100px" }}
               h="auto"
               pointerEvents="none"
               userSelect="none"
@@ -49,10 +50,11 @@ export default function HowItWorks() {
               src="/assets/vectors/vect3.png"
               alt=""
               position="absolute"
+               display={{base: 'none', md: 'block'}}
               rotate={'40deg'}
               bottom={-8}
               left={-4}
-              w={{ base: "80px", sm: "110px", md: "140px" }}
+              w={{ base: "80px", sm: "110px", md: "100px" }}
               h="auto"
               pointerEvents="none"
               userSelect="none"
@@ -65,7 +67,7 @@ export default function HowItWorks() {
               rotate={'-40deg'}
               bottom={-3}
               right={-10}
-              w={{ base: "80px", sm: "110px", md: "140px" }}
+              w={{ base: "80px", sm: "110px", md: "100px" }}
               h="auto"
               pointerEvents="none"
               userSelect="none"
@@ -88,7 +90,7 @@ export default function HowItWorks() {
             {steps.map((s, i) => (
               <Reveal key={s.title} delay={i * 120}>
                 <Flex gap="5" p="6" rounded="2xl" bg="paper.100" borderWidth="1px" borderColor="paper.200" align="flex-start">
-                  <Flex boxSize="12" flexShrink={0} rounded="full" align="center" justify="center" fontFamily="heading" fontWeight="800" fontSize="lg" color="white" background={accent.primary}>
+                  <Flex boxSize={{ base: "8", md: "12" }} flexShrink={0} rounded="full" align="center" justify="center" fontFamily="heading" fontWeight="800" fontSize={{ base: "sm", md: "lg" }} color="white" background={accent.primary}>
                     {i + 1}
                   </Flex>
                   <Stack gap="1.5">

@@ -70,7 +70,7 @@ export default function Features() {
             </Flex>
           </BentoCard>
 
-          <BentoCard colSpan={{ base: 1, lg: 2 }} icon={LuPenLine} title="Paroles par IA" text="Des textes originaux dans la langue de votre choix, modifiables avant la génération." tint="brand.pink">
+          <BentoCard colSpan={{ base: 1, lg: 2 }} icon={LuPenLine} title="Paroles " text="Des textes originaux dans la langue de votre choix, modifiables avant la génération." tint="brand.pink">
             <Stack gap="2" fontSize="sm" color="ink.700" p="4" rounded="xl" bg="paper.0" borderWidth="1px" borderColor="paper.200">
               <Text color="ink.400" fontFamily="ui" fontSize="xs">
                 Refrain

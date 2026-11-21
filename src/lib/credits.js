@@ -47,7 +47,7 @@ export async function hasEnoughCredits(userId, requiredCredits = DEFAULT_TRACK_C
 export async function deductCredits(
   userId,
   amount = DEFAULT_TRACK_COST,
-  { trackId, description = "Génération de musique par IA", metadata = {} } = {}
+  { trackId, description = "Génération de musique ", metadata = {} } = {}
 ) {
   if (amount <= 0) {
     throw new Error("Le montant à débiter doit être strictement supérieur à 0.");

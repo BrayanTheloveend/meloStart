@@ -6,6 +6,7 @@ import {
 } from "@chakra-ui/react";
 import { downloadTrackAudio } from "@/lib/downloadTrack";
 import { LuPause, LuPlay } from "react-icons/lu";
+import TestimonialPrompt from "./TestimonialPrompt";
 
 /**
  * Découpe les paroles en sections Spotify ([Verse], [Chorus], etc.) et lignes synchronisables.
@@ -721,6 +722,9 @@ export default function TrackPlayer({
           </Box>
         )}
       </Box>
+
+      {/* ── INFOBULLE AVIS & TÉMOIGNAGE APRÈS GÉNÉRATION ── */}
+      <TestimonialPrompt trackId={localTrack?.id} trackTitle={trackTitle} />
     </Box>
   );
 }

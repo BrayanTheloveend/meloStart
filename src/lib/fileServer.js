@@ -54,7 +54,7 @@ function toWebStream(nodeStream) {
   });
 }
 
-export { MIME_TYPES, toWebStream, findTargetFile };
+export { MIME_TYPES, toWebStream };
 
 /**
  * Recherche l'existence d'un fichier parmi les répertoires de stockage potentiels

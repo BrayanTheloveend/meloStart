@@ -1,5 +1,5 @@
 /**
- * Service API pour la génération de musique par IA (Suno API).
+ * Service API pour la génération de musique  (Suno API).
  * Connecté directement à l'API route Next.js /api/tracks/generate.
  *
  * Règle économique officielle : 1 chanson = 2 Notes

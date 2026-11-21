@@ -27,7 +27,7 @@ export const metadata = {
     template: "%s | pretymelo",
   },
   description:
-    "Générez de la musique par IA et créez une chanson gratuite en 30 secondes. Paroles, voix réaliste et mélodie sur mesure dans tous les styles (Rap, Pop, Lo-fi, Rock, Afrobeat). Essayez pretymelo gratuitement !",
+    "Générez de la musique et créez une chanson gratuite en 30 secondes. Paroles, voix réaliste et mélodie sur mesure dans tous les styles (Rap, Pop, Lo-fi, Rock, Afrobeat). Essayez pretymelo gratuitement !",
   keywords: [
     "générer de la musique",
     "créer une chanson gratuite",
@@ -41,6 +41,7 @@ export const metadata = {
     "voix ia musique",
     "intelligence artificielle musique",
     "pretymelo",
+    "prety melo"
   ],
   authors: [{ name: "pretymelo" }],
   creator: "pretymelo",
@@ -55,7 +56,7 @@ export const metadata = {
     siteName: "pretymelo",
     title: "pretymelo — Générateur de Musique IA | Créer une Chanson Gratuite",
     description:
-      "Générez de la musique par IA et créez votre chanson gratuite avec paroles et voix en 30 secondes. Sans compétences musicales requises.",
+      "Générez de la musique et créez votre chanson gratuite avec paroles et voix en 30 secondes. Sans compétences musicales requises.",
     images: [
       {
         url: "/assets/logo.png",
@@ -69,7 +70,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "pretymelo — Générateur de Musique IA | Créer une Chanson Gratuite",
     description:
-      "Générez de la musique par IA et créez votre chanson gratuite en 30 secondes. Essayez pretymelo gratuitement !",
+      "Générez de la musique et créez votre chanson gratuite en 30 secondes. Essayez pretymelo gratuitement !",
     images: ["/assets/logo.png"],
   },
   robots: {
